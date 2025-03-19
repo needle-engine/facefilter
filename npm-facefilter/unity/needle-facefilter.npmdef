@@ -1,5 +1,6 @@
 {
   "localPath": "..",
-  "IsLocal": false,
+  "codegen": false,
+  "IsLocal": true,
   "IsEmbedded": false
 }
