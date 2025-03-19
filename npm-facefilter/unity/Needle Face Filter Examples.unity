@@ -474,8 +474,8 @@ GameObject:
   - component: {fileID: 784234928}
   - component: {fileID: 784234929}
   - component: {fileID: 784234927}
-  - component: {fileID: 784234931}
   - component: {fileID: 784234932}
+  - component: {fileID: 784234933}
   m_Layer: 0
   m_Name: Export
   m_TagString: EditorOnly
@@ -501,8 +501,10 @@ MonoBehaviour:
   AutoCompress: 0
   Dependencies:
   - Name: '@needle-engine/facefilter'
-    VersionOrPath: Packages/com.needle.engine-samples/Runtime/Facefilter/FaceFilter.npmdef
+    VersionOrPath: Packages/com.needle.face-filter/needle-facefilter.npmdef
     Guid: 06489df698d9822449a39c8043f44a32
+  CloudName: Needle Face Filter Examples
+  CloudTeam: jg3twr0f7zgf
 --- !u!4 &784234924
 Transform:
   m_ObjectHideFlags: 0
@@ -583,19 +585,6 @@ MonoBehaviour:
   Path: /facefilter
   OverrideGzipCompression: 1
   UseGzipCompression: 0
---- !u!114 &784234931
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 784234922}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 3b6166c533b54254a033bb2509157705, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Needle.Engine.Gltf.Experimental.MeshCompression, Needle.Engine.GltfExport
-  Compression: 1
 --- !u!114 &784234932
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -608,7 +597,26 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bcc605ea0754e9a4aab7a0e867f70e01, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Needle.Engine.Deployment.DeployToNeedleCloud, Needle.Engine.Deployment
-  projectName: face filter
+--- !u!114 &784234933
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 784234922}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 52882cd15871496cba5a3596b2e735c1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Needle.Engine.Gltf.Experimental.progressive.NeedleCompressionSettings,
+    Needle.Engine.GltfExport
+  DefaultTextureFormat: 3
+  TextureMaxSize: 8192
+  GenerateTextureLODs: 1
+  UseMaxSize: 1
+  LODsMaxSize: 128
+  MeshCompression: 1
+  GenerateMeshLODs: 1
 --- !u!1 &1387623546
 GameObject:
   m_ObjectHideFlags: 0
