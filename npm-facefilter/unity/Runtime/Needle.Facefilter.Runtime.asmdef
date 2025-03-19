@@ -1,0 +1,17 @@
+{
+    "name": "Needle.Facefilter.Runtime",
+    "rootNamespace": "",
+    "references": [
+        "GUID:02672f07e9b0dc34daa8cfbc5f3bc619",
+        "GUID:f23f84078225740478820679864d14f7"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

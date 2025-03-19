@@ -1,0 +1,14 @@
+{
+  "folders": [
+    {
+      "path": "."
+    }
+  ],
+  "settings": {
+    "window.title": "needle-engine-facefilter",
+    "files.exclude": {
+      "**/.git": true,
+      "**/.DS_Store": true
+    }
+  }
+}
