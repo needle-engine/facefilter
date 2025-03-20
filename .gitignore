@@ -1,5 +1,9 @@
 Library
 Temp
 Logs
+obj
 UserSettings
 node_modules
+**/*.csproj
+**/*.sln
+.idea
