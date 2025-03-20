@@ -5,7 +5,7 @@
     }
   ],
   "settings": {
-    "window.title": "needle-engine-facefilter",
+    "window.title": "npm-facefilter",
     "files.exclude": {
       "**/.git": true,
       "**/.DS_Store": true

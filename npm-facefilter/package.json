@@ -1,6 +1,6 @@
 {
   "name": "@needle-tools/facefilter",
-  "version": "1.0.0-alpha.0",
+  "version": "1.0.0-alpha.2",
   "main": "index.ts",
   "dependencies": {
     "@mediapipe/tasks-vision": "0.10.14"
