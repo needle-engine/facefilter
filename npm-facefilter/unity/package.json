@@ -1,11 +1,11 @@
 {
     "name": "com.needle.face-filter",
-    "version": "1.0.0-alpha.9",
+    "version": "1.0.0-alpha.11",
     "displayName": "Needle Engine FaceFilter",
     "description": "Needle Engine FaceFilter",
     "dependencies": {
-        "com.unity.cloud.draco": "5.1.2",
-        "com.unity.cloud.ktx": "3.3.0",
-        "com.unity.meshopt.decompress": "0.1.0-preview.8"
+        "com.unity.cloud.draco": "5.1.8",
+        "com.unity.cloud.ktx": "3.4.5",
+        "com.unity.meshopt.decompress": "0.1.0-preview.7"
     }
 }
