@@ -1,5 +1,6 @@
 {
     "name": "com.needle.face-filter",
-    "version": "1.0.0-alpha.6",
-    "displayName": "Needle Engine FaceFilter"
+    "version": "1.0.0-alpha.7",
+    "displayName": "Needle Engine FaceFilter",
+    "description": "Needle Engine FaceFilter"
 }

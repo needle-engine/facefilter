@@ -4,8 +4,8 @@ import { existsSync, readdirSync, readFileSync, writeFileSync } from "fs";
 updateNpmdef();
 
 /**
- * @typedef {{name:string, version:string}} PackageJson
- * @typedef {Pick<PackageJson, "name" | "version">} UnityPackageJson
+ * @typedef {{name:string, version:string, description?:string}} PackageJson
+ * @typedef {Pick<PackageJson, "name" | "version" | "description">} UnityPackageJson
  * @typedef {{packageName:string, packageVersion:string}} Npmdef
  */
 
@@ -28,6 +28,7 @@ function updateUnityPackage(packageJson) {
         /** @type {UnityPackageJson} */
         const unityPackageJson = JSON.parse(readFileSync(unityPackageJsonPath, "utf8"));
         unityPackageJson.version = packageJson.version;
+        if (packageJson.description) unityPackageJson.description = packageJson.description;
         writeFileSync(unityPackageJsonPath, JSON.stringify(unityPackageJson, null, 4));
         console.log("Updated unity package.json");
 
