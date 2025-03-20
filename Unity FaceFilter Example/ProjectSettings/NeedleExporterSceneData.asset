@@ -17,5 +17,9 @@ MonoBehaviour:
     Projects:
     - ProjectPath: Needle/WebProject
     BuilderScene: 
+  - Path: Assets/Needle Face Filter Examples.unity
+    Projects:
+    - ProjectPath: Needle/WebProject
+    BuilderScene: 
   Projects:
   - ProjectPath: Needle/WebProject

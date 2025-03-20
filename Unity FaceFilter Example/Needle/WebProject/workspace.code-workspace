@@ -6,6 +6,11 @@
     {
       "name": "Needle Engine",
       "path": "./node_modules/@needle-tools/engine"
+    },
+    {
+      "name": "@needle-tools/facefilter",
+      "path": "node_modules/@needle-tools/facefilter",
+      "@needle:managed": true
     }
   ],
   "settings": {
