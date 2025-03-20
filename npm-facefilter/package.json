@@ -1,6 +1,6 @@
 {
   "name": "@needle-tools/facefilter",
-  "version": "1.0.0-alpha.3",
+  "version": "1.0.0-alpha.6",
   "main": "index.ts",
   "dependencies": {
     "@mediapipe/tasks-vision": "0.10.14"
@@ -17,5 +17,8 @@
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org/"
+  },
+  "scripts": {
+    "prepublishOnly": "node publish-npmdef.js"
   }
 }
