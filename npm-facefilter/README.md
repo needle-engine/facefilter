@@ -2,6 +2,22 @@
 
 Add face tracking to your Needle Engine projects with ease.
 
+
+# Features
+- Blendshape mesh face tracking
+- Texture face tracking with google/mediapipe canonical or procreate texture layouts (Use the `FaceMeshTexture` class)
+- Video face tracking: Play a video as a face texture (Use the `FaceMeshVideo` class)
+- Custom shader face meshes: Use custom materials on your face mesh (Use the `FaceMeshCustomShader` class)
+- Tracking for multiple faces at once (with smoothing)
+- *Can be used with Unity to create filters, animations, materials...*
+
+
+## Quickstart
+
+Run `npm i @needle-tools/facefilter'` in your web project   
+
+Then see the code or examples below:
+
 ```ts
 import { onStart } from '@needle-tools/engine';
 import { FaceMeshTexture, NeedleFaceFilterTrackingManager } from '@needle-tools/facefilter';
@@ -27,13 +43,6 @@ onStart(context => {
 });
 
 ```
-
-# Features
-- Blendshape mesh face tracking
-- Texture face tracking with google/mediapipe canonical or procreate texture layouts (Use the `FaceMeshTexture` class)
-- Video face tracking: Play a video as a face texture (Use the `FaceMeshVideo` class)
-- Custom shader face meshes: Use custom materials on your face mesh (Use the `FaceMeshCustomShader` class)
-
 
 # Examples
 - [Example on github with Unity project](https://github.com/needle-engine/facefilter)
