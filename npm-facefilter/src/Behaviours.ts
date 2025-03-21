@@ -94,7 +94,7 @@ export class FaceFilterRoot extends Behaviour {
                 }
             }
             else {
-                if (isDevEnvironment()) console.warn("No head object found in filter (" + this.name + ")");
+                if (isDevEnvironment()) console.debug("No head object found in filter (" + this.name + ")");
                 else console.debug("No head object found in filter (" + this.name + ")");
             }
         }

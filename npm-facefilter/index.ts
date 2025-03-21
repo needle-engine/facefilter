@@ -6,6 +6,8 @@
 // https://docs.needle.tools/npmdef
 
 
-export { NeedleFilterTrackingManager } from "./src/FaceFilter.js"
+export { NeedleFilterTrackingManager as NeedleFaceFilterTrackingManager } from "./src/FaceFilter.js";
+export * from "./src/Behaviours.js";
+export * from "./src/facemesh/FaceMeshBehaviour.js";
 export { NeedleRecordingHelper } from './src/RecordingHelper.js';
 export { type BlendshapeName, FacefilterUtils as NeedleFaceFilterUtils } from './src/utils.js';

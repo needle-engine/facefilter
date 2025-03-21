@@ -3,19 +3,29 @@ import { FaceLandmarker, DrawingUtils, FaceLandmarkerResult, PoseLandmarker, Pos
 import { BlendshapeName, FacefilterUtils, MediapipeHelper } from './utils.js';
 import { Object3D, Texture } from 'three';
 import { NeedleRecordingHelper } from './RecordingHelper.js';
-import { FaceFilterRoot } from './Behaviours.js';
+import { FaceFilterRoot, FilterBehaviour } from './Behaviours.js';
 import { mirror } from './settings.js';
 import { VideoRenderer } from './VideoRenderer.js';
 
 
 declare type VideoClip = string;
 
+/**
+ * Use the NeedleFilterTrackingManager to track faces and apply filters to them
+ */
 export class NeedleFilterTrackingManager extends Behaviour {
 
     /**
      * When enabled the max faces will be reduced if the performance is low
      */
+    @serializable()
     autoManagePerformance: boolean = true;
+
+    /**
+     * Assign a url parameter. If set the active filter will be stored in the URL as a query parameter
+     */
+    @serializable()
+    urlParameter: string | null = null;
 
     /**
      * The maximum number of faces that will be tracked
@@ -56,7 +66,6 @@ export class NeedleFilterTrackingManager extends Behaviour {
      */
     // @nonSerialized
     downloadName: string | null = null;
-
 
     /**
      * Test videos that can be used to test the face tracking. This is only available in development mode
@@ -118,15 +127,25 @@ export class NeedleFilterTrackingManager extends Behaviour {
         if (index < 0) index = this.filters.length - 1;
         this.select(index);
     }
-    // select(index: string);
-    // select(index: number);
-    select(index: number) {
-        // if (typeof index === "string") {
-        //     index = this.findIndex(index);
-        // }
+    /**
+     * Activate a filter by index. If you pass in a FilterBehaviour instance it will be added to the filters array and activated
+     * @param index the index of the filter to activate
+     * @returns true if the filter was activated successfully
+     */
+    select(index: number | FilterBehaviour): boolean {
+
+        if (typeof index === "object") {
+            const filter = index;
+            index = this.filters.findIndex(f => f.asset?.getComponent(FilterBehaviour) === filter);
+            if (index < 0 && filter instanceof FilterBehaviour) {
+                this.addFilter(filter, { activate: true });
+            }
+        }
+
         if (index >= 0 && index < this.filters.length && typeof index === "number") {
             this._activeFilterIndex = index;
-            setParamWithoutReload("facefilter", index > 0 ? index.toString() : null);
+            if (this.urlParameter)
+                setParamWithoutReload(this.urlParameter, index > 0 ? index.toString() : null);
 
             // preload the next filter
             const nextIndex = (index + 1) % this.filters.length;
@@ -138,6 +157,65 @@ export class NeedleFilterTrackingManager extends Behaviour {
         }
         return false;
     }
+
+    /**
+     * Activate the filter if it's currently inactive
+     */
+    activateFilter(filter: FilterBehaviour) {
+        this.select(filter);
+    }
+    /**
+     * Deactivate the filter if it's currently active
+     */
+    deactivateFilter(filter: FilterBehaviour) {
+        const index = this.filters.findIndex(f => f.asset?.getComponent(FilterBehaviour) === filter);
+        if (index >= 0 && index === this._activeFilterIndex) {
+            this._activeFilterIndex = -1;
+        }
+    }
+
+    /** Add a new filter to the tracking manager. Use `{activate: true}` to activate the filter immediately or use the `select` method to activate it later 
+     * 
+     * ### Examples
+     * ```ts Add a new filter to the tracking manager
+        const filter = manager.addFilter(new FaceMeshTexture({
+            layout: "procreate",
+                texture: {
+                url: "https://cdn.needle.tools/static/branding/logo_needle.png",
+            }
+        }));
+     * ```
+     * 
+    */
+    addFilter<T extends FilterBehaviour>(filter: T, opts?: { activate?: boolean }): T {
+        if (!filter.gameObject) {
+            const newObj = new Object3D();
+            newObj.addComponent(filter);
+            this.gameObject.add(newObj);
+        }
+        const assetReference = new AssetReference("", undefined, filter.gameObject)
+        this.filters.push(assetReference);
+        const index = this.filters.length - 1;
+        if (opts?.activate === true) {
+            this.select(index);
+        }
+        return filter;
+    }
+    /**
+     * Removes the filter from the available filters array.  
+     * If the filter is currently active it will be deactivated
+     */
+    removeFilter(filter: FilterBehaviour) {
+        const index = this.filters.findIndex(f => f.asset?.getComponent(FilterBehaviour) === filter);
+        if (index >= 0) {
+            this.filters.splice(index, 1);
+        }
+        if (index === this._activeFilterIndex) {
+            this._activeFilterIndex = -1;
+        }
+    }
+
+
     get currentFilterIndex() {
         return this._activeFilterIndex;
     }
@@ -220,15 +298,19 @@ export class NeedleFilterTrackingManager extends Behaviour {
 
         // Select initial filter, either from URL or choose a random one
         if (this._activeFilterIndex === -1) {
-            const param = getParam("facefilter");
             let didSelect = false;
-            if (typeof param === "string") {
-                const i = parseInt(param);
-                didSelect = this.select(i);
+
+            if (this.urlParameter) {
+                const param = getParam("facefilter");
+                if (typeof param === "string") {
+                    const i = parseInt(param);
+                    didSelect = this.select(i);
+                }
+                else if (typeof param === "number") {
+                    didSelect = this.select(param);
+                }
             }
-            else if (typeof param === "number") {
-                didSelect = this.select(param);
-            }
+
             if (!didSelect) {
                 // const random = Math.floor(Math.random() * this.filters.length);
                 this.select(0);
@@ -671,6 +753,7 @@ class FaceState {
 
     update(active: AssetReference | null, index: number) {
         if (!active) {
+            this.remove();
             return;
         }
 
@@ -685,7 +768,8 @@ class FaceState {
             if (active !== this.filter) {
                 GameObject.remove(this.instance);
                 this.filter = active; // < update the currently active
-                this.instance = instantiate(active.asset);
+                // Use the assetreference instance, don't instantiate a new instance because when we add a Filter via code API we want this instance to become active in the scene to be able to modify it again later
+                this.instance = active.asset;
                 this.filterBehaviour = this.instance.getOrAddComponent(FaceFilterRoot);
                 GameObject.add(this.instance, this.context.scene);
             }

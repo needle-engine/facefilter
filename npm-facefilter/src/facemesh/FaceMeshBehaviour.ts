@@ -7,7 +7,7 @@ import { FaceGeometry, FaceLayout } from "./utils.facemesh.js";
 export abstract class FaceMeshBehaviour extends FilterBehaviour {
 
     @serializable()
-    allowDrop: boolean = true;
+    allowDrop: boolean = false;
 
     protected createMesh() {
         const mat = this.createMaterial();
@@ -220,8 +220,42 @@ void main() {
 }
 `
 
+type FaceMeshTextureArg = { texture: Texture } | { url: string };
 
+/**
+ * A face filter that tracks a texture to the face.
+ */
 export class FaceMeshTexture extends FaceMeshBehaviour {
+
+    constructor(args?: { layout?: FaceLayout } & { texture?: FaceMeshTextureArg, mask?: FaceMeshTextureArg }) {
+        super();
+        if (args) {
+            if (args.layout) {
+                this.layout = args.layout;
+            }
+            if ("texture" in args) {
+                const textureInfo = args.texture;
+                if (textureInfo) {
+                    if ("url" in textureInfo) {
+                        this.updateTexture(textureInfo.url);
+                    }
+                    else if ("texture" in textureInfo) {
+                        this.updateTexture(textureInfo.texture);
+                    }
+                }
+                const maskInfo = args.mask;
+                if (maskInfo) {
+                    if ("url" in maskInfo) {
+                        this.updateMask(maskInfo.url);
+                    }
+                    else if ("texture" in maskInfo) {
+                        this.updateTexture(maskInfo.texture);
+                    }
+                }
+            }
+        }
+    }
+
 
     @serializable(Texture)
     texture: Texture | null = null;
@@ -237,12 +271,44 @@ export class FaceMeshTexture extends FaceMeshBehaviour {
 
     private _material: ShaderMaterial | null = null;
 
+    /** Last assigned url if any */
+    private _textureUrl: string | null = null;
+    updateTexture(url: string | Texture): Promise<void> {
+        if (url instanceof Texture) {
+            this._textureUrl = null;
+            this.texture = url;
+            this.onTextureChanged();
+            return Promise.resolve();
+        }
+        this._textureUrl = url;
+        return new TextureLoader().loadAsync(url).then(tex => {
+            if (this._textureUrl === url) {
+                tex.flipY = false;
+                this.texture = tex;
+                this.onTextureChanged();
+            }
+        });
+    }
+
+    private _maskUrl: string | null = null;
+    updateMask(url: string | Texture): Promise<void> {
+        if (url instanceof Texture) {
+            this._maskUrl = null;
+            this.mask = url;
+            return Promise.resolve();
+        }
+        this._maskUrl = url;
+        return new TextureLoader().loadAsync(url).then(tex => {
+            if (this._maskUrl === url) {
+                tex.flipY = false;
+                this.mask = tex;
+                this.onTextureChanged();
+            }
+        });
+    }
+
     protected createMaterial() {
-        // return new MeshBasicMaterial({
-        //     transparent: true,
-        //     // map: this.texture,
-        // });
-        return this._material = new ShaderMaterial({
+        this._material = new ShaderMaterial({
             uniforms: {
                 map: { value: this.texture },
                 mask: { value: this.mask },
@@ -261,10 +327,30 @@ export class FaceMeshTexture extends FaceMeshBehaviour {
                 }
             `
         });
+        return this._material;
+    }
+    protected onTextureChanged(): void {
+        super.onTextureChanged();
+        if (this._material) {
+            this._material.uniforms.map.value = this.texture;
+            this._material.uniforms.mask.value = this.mask;
+            this._material.needsUpdate = true;
+            this._material.uniformsNeedUpdate = true;
+        }
     }
 }
 
+/**
+ * A face filter that uses a custom material for rendering the face mesh. E.g. for custom shaders.
+ */
 export class FaceMeshCustomShader extends FaceMeshBehaviour {
+
+    constructor(args?: { material: Material }) {
+        super();
+        if (args) {
+            this.material = args.material;
+        }
+    }
 
     private __material: Material | null = null;
 
@@ -274,22 +360,54 @@ export class FaceMeshCustomShader extends FaceMeshBehaviour {
         return this.__material;
     }
     public set material(value: Material | null) {
-        console.log(value)
         this.__material = value;
     }
 
     protected createMaterial(): Material | null {
-        console.log("Creating custom material", this.material);
         return this.material;
     }
 }
 
 declare type VideoClip = string;
 
+/**
+ * A face filter that plays a video clip on the face.
+ */
 export class FaceMeshVideo extends FaceMeshBehaviour {
+
+    constructor(args?: { url: string }) {
+        super();
+        if (args) {
+            this.video = args.url;
+        }
+    }
+
+    /**
+     * Updates the video clip that is used for the face filter.
+     */
+    updateVideo(url: VideoClip) {
+        this.video = url;
+        if (this._videoElement) {
+            this._videoElement.src = url;
+        }
+    }
+
+    play() {
+        this._videoElement?.play();
+    }
+    pause() {
+        this._videoElement?.pause();
+    }
+    stop() {
+        this._videoElement?.pause();
+        this._videoElement?.load();
+    }
 
     @serializable(URL)
     video: VideoClip | null = null;
+
+    /** Reference to the video HTML element that is used for video playback */
+    get videoElement() { return this._videoElement; }
 
     private _videoElement: HTMLVideoElement | null = null;
     private _videoTexture: VideoTexture | null = null;
@@ -326,6 +444,13 @@ export class FaceMeshVideo extends FaceMeshBehaviour {
     update(): void {
         if (this._videoTexture) {
             this._videoTexture.update();
+        }
+    }
+
+    protected onTextureChanged(): void {
+        super.onTextureChanged();
+        if (this._videoTexture) {
+            this._videoTexture.needsUpdate = true;
         }
     }
 }
