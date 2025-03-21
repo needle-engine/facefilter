@@ -31,5 +31,7 @@ export {
 } from './src/utils.js';
 
 
-
-export * as Examples from "./src/examples/index.js";
+export {
+    ShaderToyFaceFilter,
+    ReadyPlayerMeFacefilterSupport as ReadyPlayerMeFaceFilter,
+} from "./src/examples/index.js"

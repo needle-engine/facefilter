@@ -108,18 +108,29 @@ class ShaderToyMaterial extends ShaderMaterial {
 
 export class ShaderToyFaceFilter extends FaceMeshBehaviour {
 
+    constructor(args?: { shader: string }) {
+        super();
+        if (args?.shader) {
+            this._networkedShader = args.shader;
+        }
+    }
+
     @serializable(Texture)
     mask: Texture | null = null;
 
     protected createMaterial(): Material | null {
-        return new ShaderToyMaterial({
+        const mat = new ShaderToyMaterial({
             uniforms: {
                 mask: { value: this.mask }
             },
             defines: {
                 USE_MASK: this.mask ? true : false
             }
-        })
+        });
+        if (this._networkedShader) {
+            this.trySetShader(this._networkedShader, mat);
+        }
+        return mat;
     }
     awake() {
         showBalloonMessage(`Copy paste <a href=\"https://shadertoy.com\" target=\"_blank\">shadertoy</a> shaders (the whole code) to use as a face filter.<br/>For example <a href=\"https://www.shadertoy.com/view/tlVGDt\" target=\"_blank\">this one</a> or <a href=\"https://www.shadertoy.com/view/ftSSRR\" target=\"_blank\">this one</a> or <a href=\"https://www.shadertoy.com/new\" target=\"_blank\">create your own</a>.`);
@@ -161,9 +172,9 @@ export class ShaderToyFaceFilter extends FaceMeshBehaviour {
             this.trySetShader(text);
         }
     }
-    private trySetShader(shader: string) {
+    private trySetShader(shader: string, target?: Material) {
         if (shader.includes("void mainImage")) {
-            const material = this.material as ShaderToyMaterial;
+            const material = (target || this.material) as ShaderToyMaterial;
             if (material) {
                 material.fragmentShader = inputsChunk + shader + mainChunk;
                 material.needsUpdate = true;
