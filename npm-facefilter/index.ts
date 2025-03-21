@@ -1,13 +1,35 @@
 ﻿
-// This is the main entry point of your npm package
-// you can add your code here directly or use it to export your api
+export {
+    NeedleFilterTrackingManager as NeedleFaceFilterTrackingManager
 
-// Learn more about npm definition packages: 
-// https://docs.needle.tools/npmdef
+} from "./src/FaceFilter.js";
 
 
-export { NeedleFilterTrackingManager as NeedleFaceFilterTrackingManager } from "./src/FaceFilter.js";
-export * from "./src/Behaviours.js";
-export * from "./src/facemesh/FaceMeshBehaviour.js";
+export {
+    FaceFilterRoot,
+    FaceFilterAnimator,
+    FaceFilterBlendshapes,
+    FaceFilterEyeBehaviour,
+    FaceFilterHeadPosition
+} from "./src/Behaviours.js";
+
+
+export {
+    FaceMeshBehaviour,
+    FaceMeshTexture,
+    FaceMeshCustomShader,
+    FaceMeshVideo
+} from "./src/facemesh/FaceMeshBehaviour.js";
+
+
 export { NeedleRecordingHelper } from './src/RecordingHelper.js';
-export { type BlendshapeName, FacefilterUtils as NeedleFaceFilterUtils } from './src/utils.js';
+
+
+export {
+    type BlendshapeName,
+    FacefilterUtils as NeedleFaceFilterUtils
+} from './src/utils.js';
+
+
+
+export * as Examples from "./src/examples/index.js";

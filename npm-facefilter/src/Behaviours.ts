@@ -3,6 +3,7 @@ import type { NeedleFilterTrackingManager } from './FaceFilter.js';
 import { BufferAttribute, Matrix4, Mesh, Object3D, SkinnedMesh, Vector3 } from 'three';
 import { BlendshapeName, FacefilterUtils } from './utils.js';
 
+
 declare type AvatarType = "Unknown" | "ReadyPlayerMe";
 
 /**
@@ -389,5 +390,3 @@ export class FaceFilterEyeBehaviour extends FilterBehaviour {
         object.rotation.set(x, y, object.rotation.z);
     }
 }
-
-
