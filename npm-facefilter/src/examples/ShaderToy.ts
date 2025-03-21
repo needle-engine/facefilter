@@ -115,6 +115,9 @@ export class ShaderToyFaceFilter extends FaceMeshBehaviour {
         }
     }
 
+    @serializable()
+    allowPaste: boolean = true;
+
     @serializable(Texture)
     mask: Texture | null = null;
 
@@ -133,7 +136,9 @@ export class ShaderToyFaceFilter extends FaceMeshBehaviour {
         return mat;
     }
     awake() {
-        showBalloonMessage(`Copy paste <a href=\"https://shadertoy.com\" target=\"_blank\">shadertoy</a> shaders (the whole code) to use as a face filter.<br/>For example <a href=\"https://www.shadertoy.com/view/tlVGDt\" target=\"_blank\">this one</a> or <a href=\"https://www.shadertoy.com/view/ftSSRR\" target=\"_blank\">this one</a> or <a href=\"https://www.shadertoy.com/new\" target=\"_blank\">create your own</a>.`);
+        const info = `Copy paste <a href=\"https://shadertoy.com\" target=\"_blank\">shadertoy</a> shaders (the whole code) to use as a face filter.<br/>For example <a href=\"https://www.shadertoy.com/view/tlVGDt\" target=\"_blank\">this one</a> or <a href=\"https://www.shadertoy.com/view/ftSSRR\" target=\"_blank\">this one</a> or <a href=\"https://www.shadertoy.com/new\" target=\"_blank\">create your own</a>.`
+        if (!this._networkedShader) showBalloonMessage(info);
+        console.debug(info);
     }
     onEnable(): void {
         super.onEnable();
@@ -167,6 +172,7 @@ export class ShaderToyFaceFilter extends FaceMeshBehaviour {
 
     private onPaste = (e: ClipboardEvent) => {
         if (!e.clipboardData) return;
+        if (!this.allowPaste) return;
         const text = e.clipboardData.getData("text");
         if (text) {
             this.trySetShader(text);

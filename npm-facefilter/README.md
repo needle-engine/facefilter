@@ -46,7 +46,8 @@ onStart(context => {
 
 # Examples
 - [Example on github with Unity project](https://github.com/needle-engine/facefilter)
-- [Example on Stackblitz](https://stackblitz.com/edit/needle-engine-facefilter)
+- [Example with Texture Mesh on Stackblitz](https://stackblitz.com/edit/needle-engine-facefilter)
+- [Example with ShaderToy on Stackblitz](https://stackblitz.com/edit/needle-engine-shadertoy-facefilter)
 
 
 # Contribution
