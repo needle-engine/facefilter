@@ -1,9 +1,13 @@
 # Needle Engine FaceFilter
 
-⚠️ Note: This project uses Needle Engine 4.4 alpha and might change in future updates.
+⚠️ **Note**: This project uses Needle Engine 4.4 alpha and is not production ready.
 
 Add face tracking to your Needle Engine projects with ease.  
 This project contains the sourcecode for the facefilter package as well as an example Unity project (see [quickstart](#quickstart) below for how to get started without an editor)
+
+---
+
+Install from [NPM](https://www.npmjs.com/package/@needle-tools/facefilter)
 
 # Features
 - Blendshape mesh face tracking
@@ -23,7 +27,7 @@ https://github.com/user-attachments/assets/d5c95dd9-629f-4abc-b371-14467db0946d
 
 ## Quickstart
 
-Run `npm i @needle-tools/facefilter'` in your web project   
+Install from NPM `npm i @needle-tools/facefilter'` in your Needle Engine web project   
 
 Then see the code or examples below:
 
