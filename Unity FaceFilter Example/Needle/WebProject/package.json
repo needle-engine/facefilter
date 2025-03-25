@@ -1,12 +1,11 @@
 {
-  "name": "my-needle-engine-project",
+  "name": "needle-facefilter-demo",
   "version": "1.0.0",
   "type": "module",
   "scripts": {
     "start": "vite --host",
     "build:dev": "vite build",
-    "build:production": "vite build -- --production",
-    "gltf:transform": "npm run transform --prefix node_modules/@needle-tools/gltf-build-pipeline"
+    "build:production": "vite build -- --production"
   },
   "dependencies": {
 	  "@needle-tools/engine": "^4.4.0-alpha",
