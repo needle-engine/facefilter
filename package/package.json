@@ -1,6 +1,6 @@
 {
   "name": "@needle-tools/facefilter",
-  "version": "1.0.0-beta",
+  "version": "1.0.0-beta.1",
   "description": "Needle Engine FaceFilter",
   "main": "index.ts",
   "exports": {
