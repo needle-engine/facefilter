@@ -18,18 +18,27 @@ Install from [NPM](https://www.npmjs.com/package/@needle-tools/facefilter)
 - *Can be used with Unity to create filters, animations, materials...*
 
 
-
 # Demo
 
 https://github.com/user-attachments/assets/d5c95dd9-629f-4abc-b371-14467db0946d
+
+# Examples
+- [Example on Github with Unity project](https://github.com/needle-engine/facefilter)
+- [Example with Blendshapes on Stackblitz](https://stackblitz.com/edit/needle-engine-facefilter-blendshapes?file=src%2Fmain.ts)
+- [Example with Sunglasses on Stackblitz](https://stackblitz.com/edit/needle-engine-facefilter-glasses?file=src%2Fmain.ts)
+- [Example with Texture Mesh on Stackblitz](https://stackblitz.com/edit/needle-engine-facefilter)
+- [Example with ShaderToy on Stackblitz](https://stackblitz.com/edit/needle-engine-shadertoy-facefilter)
 
 
 
 ## Quickstart
 
-Install from NPM `npm i @needle-tools/facefilter'` in your Needle Engine web project   
+Run `npm i @needle-tools/facefilter` in your web project   
 
 Then see the code or examples below:
+
+### Face Mesh Texture Filter
+
 
 ```ts
 import { onStart } from '@needle-tools/engine';
@@ -54,16 +63,38 @@ onStart(context => {
   // Activate one of your filters
   filtermanager.activateFilter(filter);
 });
-
 ```
-
-# Examples
-- [Example on Needle Cloud with many filters](https://needle-face-filter-examples-z23hmxb18gxoo-latest.needle.run/?)
-- [Example with Texture Mesh on Stackblitz](https://stackblitz.com/edit/needle-engine-facefilter)
-- [Example with ShaderToy on Stackblitz](https://stackblitz.com/edit/needle-engine-shadertoy-facefilter)
+[Open Example on Stackblitz](https://stackblitz.com/edit/needle-engine-facefilter)
 
 
-# Contribution
+
+### Face Mesh Blendshapes Filter
+
+
+```ts
+import { onStart } from '@needle-tools/engine';
+import { FaceMeshTexture, NeedleFaceFilterTrackingManager } from '@needle-tools/facefilter';
+
+onStart(context => {
+  const scene = context.scene;
+
+  // Create a face filter tracking manager and add it to the scene
+  const filtermanager = new NeedleFaceFilterTrackingManager();
+  filtermanager.createMenuButton = false;
+  scene.addComponent(filtermanager);
+
+  // Creating a filter using a GLB/glTF URL model that has blendshapes
+  const filter = await FaceFilterRoot.create('https://cloud.needle.tools/-/assets/Z23hmXBZWllze-ZWllze/file', {
+    scale: 0.5,
+    offset: { x: 0, y: 0.01, z: 0 },
+  });
+  if (filter) filtermanager.activateFilter(filter);
+});
+  ```
+[Open Example on Stackblitz](https://stackblitz.com/edit/needle-engine-facefilter-blendshapes?file=src%2Fmain.ts)
+
+
+# Contributing
 
 ⚠️ TODO
 
