@@ -8,8 +8,8 @@
     "build:production": "vite build -- --production"
   },
   "dependencies": {
-	  "@needle-tools/engine": "^4.4.0-alpha",
-	  "@needle-tools/facefilter": "^1.0.0-alpha.11",
+	  "@needle-tools/engine": "^4.4.0-alpha.2",
+	  "@needle-tools/facefilter": "1.0.0-alpha.20",
 	  "three": "npm:@needle-tools/three@^0.169.5"
 	},
   "devDependencies": {
