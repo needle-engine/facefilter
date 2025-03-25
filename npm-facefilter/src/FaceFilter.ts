@@ -18,18 +18,28 @@ export class NeedleFilterTrackingManager extends Behaviour {
 
     /**
      * When enabled the max faces will be reduced if the performance is low
+     * @default true
      */
     @serializable()
     autoManagePerformance: boolean = true;
 
     /**
      * Assign a url parameter. If set the active filter will be stored in the URL as a query parameter
+     * @default null
      */
     @serializable()
     urlParameter: string | null = null;
 
     /**
+     * When enabled the keyboard can be used to switch filters (A/D or ArrowLeft/ArrowRight)
+     * @default true
+     */
+    @serializable()
+    useKeyboard: boolean | undefined = true;
+
+    /**
      * The maximum number of faces that will be tracked
+     * @default 1
      */
     @serializable()
     maxFaces: number = 1;
@@ -41,16 +51,29 @@ export class NeedleFilterTrackingManager extends Behaviour {
     filters: AssetReference[] = [];
 
     /**
-     * The occlusion mesh that will be used to hide 3D objects behind the face
+     * The occlusion mesh that will be used to hide 3D objects behind the face. 
+     * @default null
+     * @example
+     * ```ts
+     * const occluder = AssetReference.createFromUrl("https://cloud.needle.tools/-/assets/Z23hmXBZ1aJXtP-Z1aJXtP/file");
+     * manager.occlusionMesh = occluder;
+     * manager.createOcclusionMesh = true;
+     * ```
      */
     @serializable(AssetReference)
     occlusionMesh: AssetReference | undefined = undefined;
 
+    /**
+     * When enabled the `occlusionMesh` property will be used to create an occlusion facemesh.   
+     * If you do not show the occluder you can set this to false or enable `overrideDefaultOccluder` on the active filter behaviour
+     * @default true
+     */
     @serializable()
     createOcclusionMesh: boolean = true;
 
     /**
      * When enabled menu buttons for Recording, Switching Filters and Sharing will be created
+     * @default true
      */
     @serializable()
     createMenuButton: boolean = true;
@@ -72,7 +95,7 @@ export class NeedleFilterTrackingManager extends Behaviour {
      * Test videos that can be used to test the face tracking. This is only available in development mode
      */
     @serializable(URL)
-    testVideo: VideoClip[] | null = null;
+    testVideo: VideoClip[] | null = [];
 
     /**
      * Get access to the currently playing video. This is the camera by default
@@ -119,10 +142,15 @@ export class NeedleFilterTrackingManager extends Behaviour {
         return FacefilterUtils.getBlendshapeValue(this._lastFaceLandmarkResults, shape, index);
     }
 
-
+    /**
+     * Activate the next filter in the list
+     */
     selectNextFilter() {
         this.select((this._activeFilterIndex + 1) % this.filters.length);
     }
+    /**
+     * Activate the previous filter in the list
+     */
     selectPreviousFilter() {
         let index = this._activeFilterIndex - 1;
         if (index < 0) index = this.filters.length - 1;
@@ -340,6 +368,7 @@ export class NeedleFilterTrackingManager extends Behaviour {
         this._buttons.forEach((button) => button.remove());
         this._states.forEach((state) => state.remove());
     }
+    /** @internal */
     onDestroy(): void {
         this._facelandmarker?.close();
         this._poselandmarker?.close();
@@ -637,6 +666,9 @@ export class NeedleFilterTrackingManager extends Behaviour {
     private _debugObjects: Object3D[] = [];
 
     private onKeyDown = (evt: KeyboardEvent) => {
+        if (!this.useKeyboard) {
+            return;
+        }
         const key = evt.key.toLowerCase();
         if (this._debug && key) {
             this.toggleDebug();
@@ -796,6 +828,9 @@ class FaceState {
             if (this.occluder) {
                 this.occluder.visible = false;
             }
+        }
+        else if (!this.manager.createOcclusionMesh) {
+            if (this.occluder) this.occluder.visible = false;
         }
         else if (!this.occluder) {
             if (this.manager.createOcclusionMesh) {

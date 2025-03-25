@@ -18,6 +18,9 @@ Run `npm i @needle-tools/facefilter'` in your web project
 
 Then see the code or examples below:
 
+### Face Mesh Texture Filter
+
+
 ```ts
 import { onStart } from '@needle-tools/engine';
 import { FaceMeshTexture, NeedleFaceFilterTrackingManager } from '@needle-tools/facefilter';
@@ -41,16 +44,46 @@ onStart(context => {
   // Activate one of your filters
   filtermanager.activateFilter(filter);
 });
-
 ```
+[Open Example on Stackblitz](https://stackblitz.com/edit/needle-engine-facefilter)
+
+
+
+### Face Mesh Blendshapes Filter
+
+
+```ts
+import { onStart } from '@needle-tools/engine';
+import { FaceMeshTexture, NeedleFaceFilterTrackingManager } from '@needle-tools/facefilter';
+
+onStart(context => {
+  const scene = context.scene;
+
+  // Create a face filter tracking manager and add it to the scene
+  const filtermanager = new NeedleFaceFilterTrackingManager();
+  filtermanager.createMenuButton = false;
+  scene.addComponent(filtermanager);
+
+  // Creating a filter using a GLB/glTF URL model that has blendshapes
+  const filter = await FaceFilterRoot.create('https://cloud.needle.tools/-/assets/Z23hmXBZWllze-ZWllze/file', {
+    scale: 0.5,
+    offset: { x: 0, y: 0.01, z: 0 },
+  });
+  if (filter) filtermanager.activateFilter(filter);
+});
+  ```
+[Open Example on Stackblitz](https://stackblitz.com/edit/needle-engine-facefilter-blendshapes?file=src%2Fmain.ts)
+
 
 # Examples
 - [Example on Github with Unity project](https://github.com/needle-engine/facefilter)
+- [Example with Blendshapes on Stackblitz](https://stackblitz.com/edit/needle-engine-facefilter-blendshapes?file=src%2Fmain.ts)
+- [Example with Sunglasses on Stackblitz](https://stackblitz.com/edit/needle-engine-facefilter-glasses?file=src%2Fmain.ts)
 - [Example with Texture Mesh on Stackblitz](https://stackblitz.com/edit/needle-engine-facefilter)
 - [Example with ShaderToy on Stackblitz](https://stackblitz.com/edit/needle-engine-shadertoy-facefilter)
 
 
-# Contribution
+# Contributing
 See [github](https://github.com/needle-engine/facefilter) for more information
 
 

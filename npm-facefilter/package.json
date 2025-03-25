@@ -1,6 +1,6 @@
 {
   "name": "@needle-tools/facefilter",
-  "version": "1.0.0-alpha.20",
+  "version": "1.0.0-beta",
   "description": "Needle Engine FaceFilter",
   "main": "index.ts",
   "exports": {
@@ -15,7 +15,7 @@
     "@mediapipe/tasks-vision": "0.10.14"
   },
   "peerDependencies": {
-	  "@needle-tools/engine": "^4.4.0-alpha.2",
+	  "@needle-tools/engine": "^4.4.0-alpha.2 || 4",
 	  "three": "npm:@needle-tools/three@^0.169.5"
 	},
   "devDependencies": {

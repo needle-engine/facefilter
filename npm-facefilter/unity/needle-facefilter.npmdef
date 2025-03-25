@@ -1,7 +1,7 @@
 {
     "type": 2,
     "packageName": "@needle-tools/facefilter",
-    "packageVersion": "1.0.0-alpha.20",
+    "packageVersion": "1.0.0-beta",
     "localPath": "..",
     "allowCodegen": false
 }

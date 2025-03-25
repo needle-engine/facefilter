@@ -41,6 +41,9 @@ export class FaceFilterRoot extends Behaviour {
         return instance?.getOrAddComponent(FaceFilterRoot) || null;
     }
 
+    /**
+     * When enabled the default occluder will not be rendered
+     */
     @serializable()
     overrideDefaultOccluder: boolean = false;
 
