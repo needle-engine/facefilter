@@ -7,6 +7,7 @@ import { FaceFilterRoot, FilterBehaviour } from './Behaviours.js';
 import { mirror } from './settings.js';
 import { VideoRenderer } from './VideoRenderer.js';
 
+const debug = getParam("debugfilter");
 
 declare type VideoClip = string;
 
@@ -132,13 +133,18 @@ export class NeedleFilterTrackingManager extends Behaviour {
      * @param index the index of the filter to activate
      * @returns true if the filter was activated successfully
      */
-    select(index: number | FilterBehaviour): boolean {
+    select(index: number | FilterBehaviour | FaceFilterRoot): boolean {
 
         if (typeof index === "object") {
             const filter = index;
             index = this.filters.findIndex(f => f.asset?.getComponent(FilterBehaviour) === filter);
-            if (index < 0 && filter instanceof FilterBehaviour) {
-                this.addFilter(filter, { activate: true });
+            if (index < 0) {
+                if (filter instanceof FilterBehaviour || filter instanceof FaceFilterRoot) {
+                    this.addFilter(filter, { activate: true });
+                }
+                else {
+                    console.warn("[FaceFilterTrackingManager] Filter not found and is of unknown type");
+                }
             }
         }
 
@@ -187,15 +193,17 @@ export class NeedleFilterTrackingManager extends Behaviour {
      * ```
      * 
     */
-    addFilter<T extends FilterBehaviour>(filter: T, opts?: { activate?: boolean }): T {
+    addFilter<T extends FilterBehaviour | FaceFilterRoot>(filter: T, opts?: { activate?: boolean }): T {
         if (!filter.gameObject) {
             const newObj = new Object3D();
             newObj.addComponent(filter);
-            this.gameObject.add(newObj);
         }
-        const assetReference = new AssetReference("", undefined, filter.gameObject)
+        if (!filter.gameObject.parent) {
+            this.gameObject.add(filter.gameObject);
+        }
+        const assetReference = new AssetReference("", undefined, filter.gameObject);
+        const index = this.filters.length;
         this.filters.push(assetReference);
-        const index = this.filters.length - 1;
         if (opts?.activate === true) {
             this.select(index);
         }

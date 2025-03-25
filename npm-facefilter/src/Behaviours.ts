@@ -1,6 +1,6 @@
-import { Animator, Behaviour, isDevEnvironment, Mathf, NEEDLE_progressive, serializable } from '@needle-tools/engine';
+import { Animator, AssetReference, Behaviour, isDevEnvironment, Mathf, NEEDLE_progressive, serializable } from '@needle-tools/engine';
 import type { NeedleFilterTrackingManager } from './FaceFilter.js';
-import { BufferAttribute, Matrix4, Mesh, Object3D, SkinnedMesh, Vector3 } from 'three';
+import { BufferAttribute, Matrix4, Mesh, Object3D, SkinnedMesh, Vector3, Vector3Like } from 'three';
 import { BlendshapeName, FacefilterUtils } from './utils.js';
 
 
@@ -10,6 +10,36 @@ declare type AvatarType = "Unknown" | "ReadyPlayerMe";
  * Root Filter behaviour
  */
 export class FaceFilterRoot extends Behaviour {
+
+    /**
+     * Create a new FaceFilterRoot from a given URL. This can then be added to the FaceFilterManager
+     * @param url The URL of the asset to load
+     * @param opts Options for the filter
+     * @returns A promise that resolves to the FaceFilterRoot instance
+     * @example
+     * ```typescript
+     * const filter = await FaceFilterRoot.create("path/to/asset.glb", { scale: 0.9, offset: { x: 0, y: 0.1, z: 0 } });
+     * if(filter) manager.activateFilter(filter);
+     * ```
+     */
+    static async create(url: string, opts?: { scale?: number, offset?: Vector3Like }): Promise<FaceFilterRoot | null> {
+        const instance = await AssetReference.getOrCreateFromUrl(url).instantiate();
+        if (opts) {
+            const headPosition = new Object3D();
+            instance?.add(headPosition);
+            headPosition.addComponent(FaceFilterHeadPosition);
+            // Note: everything is inverted because scaling the head position small makes the head appear big (this is so we can adjust the head gizmo in an editor for example)
+            // Similarly: moving the head gizmo forwards makes the head model appear to move backwards
+            if (opts.scale) {
+                const invertedScale = 1 / opts.scale;
+                headPosition.scale.set(invertedScale, invertedScale, invertedScale);
+            }
+            if (opts.offset) {
+                headPosition.position.set(-1 * opts.offset.x, -1 * opts.offset.y, -1 * opts.offset.z);
+            }
+        }
+        return instance?.getOrAddComponent(FaceFilterRoot) || null;
+    }
 
     @serializable()
     overrideDefaultOccluder: boolean = false;
