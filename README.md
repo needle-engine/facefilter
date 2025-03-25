@@ -20,7 +20,13 @@ Install from [NPM](https://www.npmjs.com/package/@needle-tools/facefilter)
 
 # Demo
 
-https://github.com/user-attachments/assets/d5c95dd9-629f-4abc-b371-14467db0946d
+
+
+https://github.com/user-attachments/assets/51300430-6290-4672-b2aa-f1e870b9e99c
+
+
+
+
 
 # Examples
 - [Example on Github with Unity project](https://github.com/needle-engine/facefilter)
