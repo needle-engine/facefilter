@@ -14,7 +14,7 @@ Add face tracking to your Needle Engine projects with ease.
 
 ## Quickstart
 
-Run `npm i @needle-tools/facefilter'` in your web project   
+Run `npm i @needle-tools/facefilter` in your web project   
 
 Then see the code or examples below:
 
