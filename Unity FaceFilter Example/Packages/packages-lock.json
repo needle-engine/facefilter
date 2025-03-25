@@ -1,7 +1,7 @@
 {
   "dependencies": {
     "com.needle.engine-exporter": {
-      "version": "4.4.0-alpha.1",
+      "version": "4.4.0-alpha.2",
       "depth": 0,
       "source": "registry",
       "dependencies": {
@@ -19,7 +19,7 @@
       "url": "https://packages.needle.tools"
     },
     "com.needle.face-filter": {
-      "version": "file:com.needle.face-filter-1.0.0-alpha.11.tgz",
+      "version": "file:com.needle.face-filter-1.0.0-alpha.20.tgz",
       "depth": 0,
       "source": "local-tarball",
       "dependencies": {

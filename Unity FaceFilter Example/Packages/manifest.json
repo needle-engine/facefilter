@@ -1,7 +1,7 @@
 {
   "dependencies": {
-    "com.needle.engine-exporter": "4.4.0-alpha.1",
-    "com.needle.face-filter": "file:com.needle.face-filter-1.0.0-alpha.11.tgz",
+    "com.needle.engine-exporter": "4.4.0-alpha.2",
+    "com.needle.face-filter": "file:com.needle.face-filter-1.0.0-alpha.20.tgz",
     "com.unity.cloud.draco": "5.1.8",
     "com.unity.cloud.ktx": "3.4.5",
     "com.unity.ide.rider": "3.0.35",
