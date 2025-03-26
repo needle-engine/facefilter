@@ -10,6 +10,7 @@
     "files.exclude": {
       "**/.git": true,
       "**/.DS_Store": true
-    }
+    },
+    "liveServer.settings.port": 5502
   }
 }

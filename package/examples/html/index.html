@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <script type="importmap">
+        {
+          "imports": {
+            "@needle-tools/engine": "https://cdn.jsdelivr.net/npm/@needle-tools/engine/dist/three.min.js",
+            "@needle-tools/engine": "https://cdn.jsdelivr.net/npm/@needle-tools/engine/dist/needle-engine.min.js",
+            "@needle-tools/facefilter": "https://cdn.jsdelivr.net/npm/@needle-tools/facefilter/dist/facefilter.min.js"
+          }
+        }
+    </script>
+</head>
+
+<body style="margin:0; padding:0;">
+    <needle-engine></needle-engine>
+</body>
+
+<script type="module">
+    import { Object3D } from "three";
+    import { onStart, addComponent } from "@needle-tools/engine";
+    import { NeedleFaceFilterTrackingManager, FaceMeshTexture } from "@needle-tools/facefilter";
+
+    onStart(context => {
+        const { scene } = context;
+
+        const filtermanager = new NeedleFaceFilterTrackingManager();
+        filtermanager.maxFaces = 1;
+        filtermanager.createMenuButton = true;
+        scene.addComponent(filtermanager);
+
+        const filter3 = new FaceMeshTexture({
+            layout: 'procreate',
+            texture: {
+                url: 'https://raw.githubusercontent.com/ColossalMonk/Face-Mask-Spark-AR/refs/heads/master/textures/photos_2018_2_6_fst_dry-soil-texture.jpg',
+            },
+            mask: {
+                url: 'https://raw.githubusercontent.com/needle-engine/facefilter/refs/heads/main/package/unity/Runtime/Base%20Assets/Face%20Mesh/Face%20Mask%20Occlusion%20(Procreate).png',
+            },
+        });
+        filtermanager.addFilter(filter3, { activate: false });
+    })
+</script>
+
+</html>

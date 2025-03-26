@@ -86,6 +86,11 @@ onStart(context => {
 # Contributing
 See [Github](https://github.com/needle-engine/facefilter) for more information
 
+# Package Dependencies
+
+Source files are 75 kB (gzip).  
+This package contains files for the Unity integration and are not included in web builds.   
+
 
 # Contact
 
