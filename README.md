@@ -18,22 +18,20 @@ Install from [NPM](https://www.npmjs.com/package/@needle-tools/facefilter)
 - *Can be used with Unity to create filters, animations, materials...*
 
 
-# Demo
-
-
-
-https://github.com/user-attachments/assets/51300430-6290-4672-b2aa-f1e870b9e99c
-
-
-
 
 
 # Examples
-- [Example on Github with Unity project](https://github.com/needle-engine/facefilter)
 - [Example with Blendshapes on Stackblitz](https://stackblitz.com/edit/needle-engine-facefilter-blendshapes?file=src%2Fmain.ts)
 - [Example with Sunglasses on Stackblitz](https://stackblitz.com/edit/needle-engine-facefilter-glasses?file=src%2Fmain.ts)
 - [Example with Texture Mesh on Stackblitz](https://stackblitz.com/edit/needle-engine-facefilter)
 - [Example with ShaderToy on Stackblitz](https://stackblitz.com/edit/needle-engine-shadertoy-facefilter)
+- [Example without a bundler (HTML only) on Stackblitz](https://stackblitz.com/edit/needle-engine-facefilter-html?file=index.html) ([or github](https://github.com/needle-engine/facefilter/blob/main/package/examples/html/index.html))
+- [Demo Video](https://github.com/user-attachments/assets/51300430-6290-4672-b2aa-f1e870b9e99c)
+
+## Video
+
+https://github.com/user-attachments/assets/51300430-6290-4672-b2aa-f1e870b9e99c
+
 
 
 
