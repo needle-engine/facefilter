@@ -1,6 +1,6 @@
 {
   "name": "@needle-tools/facefilter",
-  "version": "1.0.0-beta.1",
+  "version": "1.0.0-beta.2",
   "description": "Needle Engine FaceFilter",
   "main": "index.ts",
   "exports": {
@@ -11,6 +11,16 @@
       "import": "./codegen/register_types.ts"
     }
   },
+  "files": [
+    "README.md",
+    "CHANGELOG.md",
+    "index.ts",
+    "src",
+    "codegen",
+    "lib",
+    "dist",
+    "unity"
+  ],
   "dependencies": {
     "@mediapipe/tasks-vision": "0.10.14"
   },
@@ -20,8 +30,9 @@
   },
   "devDependencies": {
     "@needle-tools/engine": "^4.4.0-alpha.2",
-    "three": "npm:@needle-tools/three@^0.169.5",
-    "@types/three": "0.169.0"
+    "@types/three": "0.169.0",
+    "esbuild": "^0.25.1",
+    "three": "npm:@needle-tools/three@^0.169.5"
   },
   "publishConfig": {
     "access": "public",
