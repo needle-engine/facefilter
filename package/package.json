@@ -15,19 +15,39 @@
     "@mediapipe/tasks-vision": "0.10.14"
   },
   "peerDependencies": {
-	  "@needle-tools/engine": "^4.4.0-alpha.2 || 4",
-	  "three": "npm:@needle-tools/three@^0.169.5"
-	},
+    "@needle-tools/engine": "^4.4.0-alpha.2 || 4",
+    "three": "npm:@needle-tools/three@^0.169.5"
+  },
   "devDependencies": {
-	  "@needle-tools/engine": "^4.4.0-alpha.2",
-	  "three": "npm:@needle-tools/three@^0.169.5",
-	  "@types/three": "0.169.0"
-	},
+    "@needle-tools/engine": "^4.4.0-alpha.2",
+    "three": "npm:@needle-tools/three@^0.169.5",
+    "@types/three": "0.169.0"
+  },
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org/"
   },
   "scripts": {
     "prepublishOnly": "npx --yes needle-tools/npm-publish-helper"
-  }
+  },
+  "keywords": [
+    "needle",
+    "ar",
+    "augmented-reality",
+    "facefilter",
+    "blendshapes",
+    "facemesh",
+    "procreate",
+    "google",
+    "mediapipe",
+    "cannonical",
+    "arkit",
+    "arcore",
+    "sparkar",
+    "three",
+    "threejs",
+    "webgl",
+    "camera",
+    "video"
+  ]
 }
