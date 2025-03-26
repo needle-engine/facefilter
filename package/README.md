@@ -81,6 +81,7 @@ onStart(context => {
 - [Example with Sunglasses on Stackblitz](https://stackblitz.com/edit/needle-engine-facefilter-glasses?file=src%2Fmain.ts)
 - [Example with Texture Mesh on Stackblitz](https://stackblitz.com/edit/needle-engine-facefilter)
 - [Example with ShaderToy on Stackblitz](https://stackblitz.com/edit/needle-engine-shadertoy-facefilter)
+- [Example without a bundler (HTML only) on Stackblitz](https://stackblitz.com/edit/needle-engine-facefilter-html?file=index.html) ([or local](./examples/html/index.html))
 - [Demo Video](https://github.com/user-attachments/assets/51300430-6290-4672-b2aa-f1e870b9e99c)
 
 # Contributing
