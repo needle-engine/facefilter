@@ -1,4 +1,5 @@
 ﻿import "./codegen/register_types.js";
+import "./src/auto.js";
 
 export {
     NeedleFilterTrackingManager as NeedleFaceFilterTrackingManager
