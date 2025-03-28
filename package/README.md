@@ -18,6 +18,31 @@ Run `npm i @needle-tools/facefilter` in your web project
 
 Then see the code or examples below:
 
+
+### Face Filter with HTML only
+
+See full examples in `/examples/html/` or the [live example](https://stackblitz.com/edit/needle-engine-facefilter-html?file=index.html)   
+
+#### Supported attributes
+
+| | |
+| -- | -- |
+| `face-filter` | URL to either a image or model file. Supported formats: `glTF`, `GLB`, `FBX`, `OBJ` **or 2D** `jpeg`, `jpg`, `png`, `webp` |
+| `face-filter-mask` | (optional, 2D only) URL to image file that will be used to mask out the face filter texture
+| `face-filter-layout` | (optional, 2D only) Either `procreate`, `mediapipe` or `canonical`. Default `mediapipe`
+| `face-filter-scale` | (optional, 3D only) Apply scale to the 3D face filter model (e.g. `face-filter-scale=".5"`)
+| `face-filter-offset` | (optional, 3D only) Offset the 3D face filter model (e.g. `face-filter-offset="0.0, 0.1, 0.1"`)
+
+
+```html
+    <needle-engine
+        face-filter="https://cdn.needle.tools/static/facefilter/facemask-template-procreate.webp"
+        face-filter-mask="https://cdn.needle.tools/static/facefilter/facemask-occlusion-procreate.webp"
+        face-filter-layout="procreate">
+    </needle-engine>
+```
+
+
 ### Face Mesh Texture Filter
 
 

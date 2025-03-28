@@ -17,10 +17,27 @@
 <body style="margin:0; padding:0;">
     <needle-engine
         background-color="#ffffdd"
-        face-filter="https://raw.githubusercontent.com/ColossalMonk/Face-Mask-Spark-AR/refs/heads/master/textures/photos_2018_2_6_fst_dry-soil-texture.jpg"></needle-engine>
+        face-filter="https://cdn.needle.tools/static/facefilter/facemask-template-procreate.webp"
+        face-filter-mask="https://cdn.needle.tools/static/facefilter/facemask-occlusion-procreate.webp"
+        face-filter-layout="procreate"
+        >
+    </needle-engine>
 </body>
 
-<!-- <script type="module">
+
+<!-- 
+Medipaipe layout Example:
+<needle-engine
+    background-color="#ffffdd"
+    face-filter-layout="mediapipe"
+    face-filter="https://cdn.needle.tools/static/facefilter/facemask-template-mediapipe.webp">
+</needle-engine> 
+-->
+
+<!-- 
+Custom scripting example if you don't want to use html attributes and need more control:
+
+<script type="module">
     import { Object3D } from "three";
     import { onStart, addComponent } from "@needle-tools/engine";
     import { NeedleFaceFilterTrackingManager, FaceMeshTexture } from "@needle-tools/facefilter";
