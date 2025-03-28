@@ -13,9 +13,6 @@ This project contains the sourcecode for the facefilter package as well as an ex
 
 ---
 
-Install from [NPM](https://www.npmjs.com/package/@needle-tools/facefilter)  
-
-**Note**: The Unity project uses Needle Engine 4.4 alpha.
 
 
 # Features
@@ -37,12 +34,6 @@ Install from [NPM](https://www.npmjs.com/package/@needle-tools/facefilter)
 - [Example with HTML only 3D filter on Stackblitz](https://stackblitz.com/edit/needle-engine-facefilter-html-only-3d?file=index.html) ([or github](https://github.com/needle-engine/facefilter/blob/main/package/examples/html/model.html))
 - [Demo Video](https://github.com/user-attachments/assets/51300430-6290-4672-b2aa-f1e870b9e99c)
 
-## Video
-
-https://github.com/user-attachments/assets/51300430-6290-4672-b2aa-f1e870b9e99c
-
-
-
 
 ## Quickstart
 
@@ -55,6 +46,8 @@ Then see the code below or [full examples](#examples):
 1) Clone this repository
 2) Open the Unity project at `Unity FaceFilter Example`
 3) Open the Example scene in Unity and click play
+
+**Note**: The Unity project uses Needle Engine 4.4 alpha.
 
 
 ### Face Filter with HTML only
@@ -74,29 +67,34 @@ See full examples in [/examples/html/](/package/examples/)
 
 #### HTML Example
 ```html
-<head>
-    <script type="importmap">
-        {
-          "imports": {
-            "three": "https://cdn.jsdelivr.net/npm/@needle-tools/engine@4.4.0-alpha.5/dist/three.min.js",
-            "@needle-tools/engine": "https://cdn.jsdelivr.net/npm/@needle-tools/engine@4.4.0-alpha.5/dist/needle-engine.min.js",
-            "@needle-tools/facefilter": "https://cdn.jsdelivr.net/npm/@needle-tools/facefilter/dist/facefilter.min.js"
+<!DOCTYPE html>
+<html>
+  <head>
+      <script type="importmap">
+          {
+            "imports": {
+              "three": "https://cdn.jsdelivr.net/npm/@needle-tools/engine@4.4.0-alpha.5/dist/three.min.js",
+              "@needle-tools/engine": "https://cdn.jsdelivr.net/npm/@needle-tools/engine@4.4.0-alpha.5/dist/needle-engine.min.js",
+              "@needle-tools/facefilter": "https://cdn.jsdelivr.net/npm/@needle-tools/facefilter/dist/facefilter.min.js"
+            }
           }
-        }
-    </script>
-    <script type="module" src="https://cdn.jsdelivr.net/npm/@needle-tools/facefilter/dist/facefilter.min.js"></script>
-</head>
+      </script>
+      <script type="module" src="https://cdn.jsdelivr.net/npm/@needle-tools/facefilter/dist/facefilter.min.js"></script>
+  </head>
 
-<body style="margin:0; padding:0;">
-    <needle-engine
-        background-color="#ffffdd"
-        face-filter="https://cdn.needle.tools/static/facefilter/facemask-template-procreate.webp"
-        face-filter-mask="https://cdn.needle.tools/static/facefilter/facemask-occlusion-procreate.webp"
-        face-filter-layout="procreate"
-        >
-    </needle-engine>
-</body>
+  <body style="margin:0; padding:0;">
+      <needle-engine
+          background-color="#ffffdd"
+          face-filter="https://cdn.needle.tools/static/facefilter/facemask-template-procreate.webp"
+          face-filter-mask="https://cdn.needle.tools/static/facefilter/facemask-occlusion-procreate.webp"
+          face-filter-layout="procreate"
+          >
+      </needle-engine>
+  </body>
+</html>
 ```
+[Open 2D Example](https://stackblitz.com/edit/needle-engine-facefilter-html-only?file=index.html) – 
+[Open 3D Example](https://stackblitz.com/edit/needle-engine-facefilter-html-only-3d?file=index.html)
 
 
 
@@ -127,7 +125,7 @@ onStart(context => {
   filtermanager.activateFilter(filter);
 });
 ```
-[Open Example on Stackblitz](https://stackblitz.com/edit/needle-engine-facefilter)
+[Open Example](https://stackblitz.com/edit/needle-engine-facefilter)
 
 
 
@@ -154,7 +152,13 @@ onStart(context => {
   if (filter) filtermanager.activateFilter(filter);
 });
   ```
-[Open Example on Stackblitz](https://stackblitz.com/edit/needle-engine-facefilter-blendshapes?file=src%2Fmain.ts)
+[Open Example](https://stackblitz.com/edit/needle-engine-facefilter-blendshapes?file=src%2Fmain.ts)
+
+
+## Video
+
+https://github.com/user-attachments/assets/51300430-6290-4672-b2aa-f1e870b9e99c
+
 
 
 # Contributing
