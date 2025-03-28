@@ -1,6 +1,6 @@
 # Needle Engine FaceFilter
 
-Add face tracking to your Needle Engine projects with ease.  
+Add face tracking to your [Needle Engine](https://needle.tools) projects with ease.  
 This project contains the sourcecode for the facefilter package as well as an example Unity project (see [quickstart](#quickstart) below for how to get started without an editor)
 
 
