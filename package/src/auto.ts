@@ -27,7 +27,7 @@ onStart(async ctx => {
                     if (layout) {
                         const msg = `Invalid value for "face-filter-layout" attribute: "${layout}". Supported values are: "procreate", "mediapipe", "canonical"`;
                         console.warn(msg);
-                        if(isDevEnvironment()) showBalloonError(msg);
+                        if (isDevEnvironment()) showBalloonError(msg);
                     }
                     layout = "mediapipe";
                     break;
@@ -53,26 +53,25 @@ onStart(async ctx => {
         }
         else if (isModel(facefilterValue)) {
             let facefilterScale: string | null | number = ctx.domElement.getAttribute("face-filter-scale");
-            let facefilterOffset: Vec3 | string | null = ctx.domElement.getAttribute("face-filter-offset");
+            let facefilterOffsetAttribute: string | null = ctx.domElement.getAttribute("face-filter-offset");
+            const faceFilterOffset = { x: 0, y: 0, z: 0 }
 
             if (typeof facefilterScale === "string") {
                 facefilterScale = parseFloat(facefilterScale);
             }
-            if (typeof facefilterOffset === "string") {
-                const values = facefilterOffset.split(",").map(v => parseFloat(v));
+            if (typeof facefilterOffsetAttribute === "string") {
+                const values = facefilterOffsetAttribute.split(",").map(v => parseFloat(v));
                 if (values.length === 3) {
-                    facefilterOffset = {
-                        x: values[0],
-                        y: values[1],
-                        z: values[2]
-                    };
+                    faceFilterOffset.x = values[0] || 0;
+                    faceFilterOffset.y = values[1] || 0;
+                    faceFilterOffset.z = values[2] || 0;
                 }
             }
 
             manager = ctx.scene.addComponent(NeedleFaceFilterTrackingManager);
             filter = await FaceFilterRoot.create(facefilterValue, {
                 scale: Number.isNaN(facefilterScale) ? 1 : facefilterScale || 1,
-                offset: { x: 0, y: 0, z: 0 },
+                offset: faceFilterOffset,
             });
             if (filter) {
                 filter.gameObject.visible = false;
@@ -82,7 +81,7 @@ onStart(async ctx => {
         else {
             const msg = `Value for "face-filter" attribute is not a valid image or model: "${facefilterValue}". Please provide a valid image or model url (Supported formats: .jpeg, .jpg, .png, .webp, .glb, .gltf, .fbx, .obj)`;
             console.error(msg);
-            if(isDevEnvironment()) showBalloonError(msg);
+            if (isDevEnvironment()) showBalloonError(msg);
             return;
         }
 

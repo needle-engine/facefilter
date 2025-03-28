@@ -21,7 +21,7 @@ Then see the code or examples below:
 
 ### Face Filter with HTML only
 
-See full examples in `/examples/html/` or the [live example](https://stackblitz.com/edit/needle-engine-facefilter-html?file=index.html)   
+See full examples in `/examples/html/`   
 
 #### Supported attributes
 
@@ -101,12 +101,14 @@ onStart(context => {
 
 
 # Examples
-- [Example on Github with Unity project](https://github.com/needle-engine/facefilter)
+- [Full project & source on Github](https://github.com/needle-engine/facefilter)
 - [Example with Blendshapes on Stackblitz](https://stackblitz.com/edit/needle-engine-facefilter-blendshapes?file=src%2Fmain.ts)
 - [Example with Sunglasses on Stackblitz](https://stackblitz.com/edit/needle-engine-facefilter-glasses?file=src%2Fmain.ts)
 - [Example with Texture Mesh on Stackblitz](https://stackblitz.com/edit/needle-engine-facefilter)
 - [Example with ShaderToy on Stackblitz](https://stackblitz.com/edit/needle-engine-shadertoy-facefilter)
-- [Example without a bundler (HTML only) on Stackblitz](https://stackblitz.com/edit/needle-engine-facefilter-html?file=index.html) ([or github](https://github.com/needle-engine/facefilter/blob/main/package/examples/html/index.html))
+- [Example without a bundler on Stackblitz](https://stackblitz.com/edit/needle-engine-facefilter-html?file=index.html)
+- [Example with HTML only 2D filter on Stackblitz](https://stackblitz.com/edit/needle-engine-facefilter-html-only?file=index.html) ([or github](https://github.com/needle-engine/facefilter/blob/main/package/examples/html/index.html))
+- [Example with HTML only 3D filter on Stackblitz](https://stackblitz.com/edit/needle-engine-facefilter-html-only-3d?file=index.html) ([or github](https://github.com/needle-engine/facefilter/blob/main/package/examples/html/model.html))
 - [Demo Video](https://github.com/user-attachments/assets/51300430-6290-4672-b2aa-f1e870b9e99c)
 
 # Contributing
