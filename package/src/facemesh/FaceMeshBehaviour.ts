@@ -220,7 +220,7 @@ void main() {
 }
 `
 
-type FaceMeshTextureArg = { texture: Texture } | { url: string };
+type FaceMeshTextureArg = { texture: Texture | null | undefined } | { url: string | null | undefined };
 
 /**
  * A face filter that tracks a texture to the face.
@@ -236,19 +236,19 @@ export class FaceMeshTexture extends FaceMeshBehaviour {
             if ("texture" in args) {
                 const textureInfo = args.texture;
                 if (textureInfo) {
-                    if ("url" in textureInfo) {
+                    if ("url" in textureInfo && textureInfo.url) {
                         this.updateTexture(textureInfo.url);
                     }
-                    else if ("texture" in textureInfo) {
+                    else if ("texture" in textureInfo && textureInfo.texture) {
                         this.updateTexture(textureInfo.texture);
                     }
                 }
                 const maskInfo = args.mask;
                 if (maskInfo) {
-                    if ("url" in maskInfo) {
+                    if ("url" in maskInfo && maskInfo.url) {
                         this.updateMask(maskInfo.url);
                     }
-                    else if ("texture" in maskInfo) {
+                    else if ("texture" in maskInfo && maskInfo.texture) {
                         this.updateTexture(maskInfo.texture);
                     }
                 }
