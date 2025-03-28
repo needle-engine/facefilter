@@ -809,7 +809,7 @@ class FaceState {
                 GameObject.remove(this.instance);
                 this.filter = active; // < update the currently active
                 // Use the assetreference instance, don't instantiate a new instance because when we add a Filter via code API we want this instance to become active in the scene to be able to modify it again later
-                this.instance = active.asset;
+                this.instance = index <= 0 ? active.asset : instantiate(active.asset);
                 this.filterBehaviour = this.instance.getOrAddComponent(FaceFilterRoot);
                 GameObject.add(this.instance, this.context.scene);
             }
