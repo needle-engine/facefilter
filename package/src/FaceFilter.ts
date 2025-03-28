@@ -250,11 +250,20 @@ export class NeedleFilterTrackingManager extends Behaviour {
             this._activeFilterIndex = -1;
         }
     }
-
-
+    /** The index of the currently active filter */
     get currentFilterIndex() {
         return this._activeFilterIndex;
     }
+
+    /**
+     * Get an array to the active face objects.  
+     * @returns an array of th active face objects, thise hold a reference to the face instance
+     */
+    getActiveFaceObjects() {
+        return Array.from(this._states)
+    }
+
+
     // private findIndex(str: string): number {
     //     for (let i = 0; i < this.filters.length; i++) {
     //         const filter = this.filters[i];
@@ -447,7 +456,7 @@ export class NeedleFilterTrackingManager extends Behaviour {
 
     private _activeFilterIndex: number = -1;
 
-    private readonly _states: Array<FaceState> = [];
+    private readonly _states: Array<FaceInstance> = [];
 
     private _lastTimeOptionsChanged: number = -1;
     private _currentMaxFaces: number = -1;
@@ -599,8 +608,8 @@ export class NeedleFilterTrackingManager extends Behaviour {
         const active = this.filters[this._activeFilterIndex];
 
         for (let i = 0; i < matrices.length; i++) {
-            const state = this._states[i] ?? new FaceState(this);
-            state.update(active, i);
+            const state = this._states[i] ?? new FaceInstance(this);
+            state.update(active, i, matrices.length);
             this._states[i] = state;
         }
     }
@@ -776,55 +785,61 @@ export class NeedleFilterTrackingManager extends Behaviour {
 }
 
 
-class FaceState {
-    private readonly manager: NeedleFilterTrackingManager;
-
+class FaceInstance {
+    readonly manager: NeedleFilterTrackingManager;
     get context() { return this.manager.context; }
     get lastUpdateTime() { return this._lastUpdateTime }
-    private _lastUpdateTime: number = -1;
+
+    /** The face instance when loaded and active */
+    get instance() { return this._instance; }
+    /** The index of the tracked face */
+    get faceIndex() { return this._faceIndex; }
 
     constructor(manager: NeedleFilterTrackingManager) {
         this.manager = manager;
     }
 
-    private filter: AssetReference | null = null;
-    private instance: Object3D | null = null;
-    private filterBehaviour: FaceFilterRoot | null = null;
+    private _lastUpdateTime: number = -1;
+    private _filter: AssetReference | null = null;
+    private _instance: Object3D | null = null;
+    private _filterBehaviour: FaceFilterRoot | null = null;
+    private _faceIndex: number = -1;
 
-    update(active: AssetReference | null, index: number) {
+    update(active: AssetReference | null, index: number, _currentFacesCount: number) {
         if (!active) {
             this.remove();
             return;
         }
 
+        this._faceIndex = index;
         this._lastUpdateTime = this.context.time.realtimeSinceStartup;
 
         // If we have an active filter make sure it loads
-        if (this.filter != active && !active.asset) {
+        if (this._filter != active && !active.asset) {
             active.loadAssetAsync();
         }
         else if (active?.asset) {
             // Check if the active filter is still the one that *should* be active/visible
-            if (active !== this.filter) {
-                GameObject.remove(this.instance);
-                this.filter = active; // < update the currently active
-                // Use the assetreference instance, don't instantiate a new instance because when we add a Filter via code API we want this instance to become active in the scene to be able to modify it again later
-                this.instance = index <= 0 ? active.asset : instantiate(active.asset);
-                this.filterBehaviour = this.instance.getOrAddComponent(FaceFilterRoot);
-                GameObject.add(this.instance, this.context.scene);
+            if (active !== this._filter) {
+                GameObject.remove(this._instance);
+                this._filter = active; // < update the currently active
+                // TODO: figure out a better way to update instances when the original behaviour script instannce changes. Currently a user has to manually query the currently active instances and update textures
+                this._instance = this.manager.maxFaces > 1 ? instantiate(active.asset) : active.asset;
+                this._filterBehaviour = this._instance.getOrAddComponent(FaceFilterRoot);
+                GameObject.add(this._instance, this.context.scene);
             }
 
-            if (this.instance && this.instance.parent !== this.context.scene) {
-                this.instance.visible = true;
-                GameObject.add(this.instance, this.context.scene);
+            if (this._instance && this._instance.parent !== this.context.scene) {
+                this._instance.visible = true;
+                GameObject.add(this._instance, this.context.scene);
             }
-            this.filterBehaviour!.onResultsUpdated(this.manager, index);
+            this._filterBehaviour!.onResultsUpdated(this.manager, index);
         }
     }
 
     render(matrix: Matrix) {
         // Setup/manage occlusions
-        if (this.filterBehaviour?.overrideDefaultOccluder) {
+        if (this._filterBehaviour?.overrideDefaultOccluder) {
             if (this.occluder) {
                 this.occluder.visible = false;
             }
@@ -846,7 +861,7 @@ class FaceState {
 
     remove() {
         GameObject.remove(this.occluder);
-        GameObject.remove(this.instance);
+        GameObject.remove(this._instance);
     }
 
 

@@ -15,6 +15,17 @@ onStart(async ctx => {
         let filter: FaceFilterRoot | FaceMeshTexture | null = null;
         let manager: NeedleFaceFilterTrackingManager | null = null;
 
+        let maxFaces = 1;
+        const maxFacesAttribute = ctx.domElement.getAttribute("face-filter-max-faces");
+        if (maxFacesAttribute) {
+            const number = parseInt(maxFacesAttribute);
+            console.debug(`Setting max faces to ${number}`);
+            if (!isNaN(number)) {
+                maxFaces = number;
+            }
+            else console.warn(`Invalid value for "face-filter-max-faces" attribute: "${maxFacesAttribute}". Expected a number`);
+        }
+
         if (isImage(facefilterValue)) {
             let layout: FaceLayout | null | undefined = ctx.domElement.getAttribute("face-filter-layout") as any;;
             switch (layout) {
@@ -39,7 +50,7 @@ onStart(async ctx => {
             if (!faceFilterMask || !isImage(faceFilterMask)) {
                 faceFilterMask = undefined;
             }
-            manager = ctx.scene.addComponent(NeedleFaceFilterTrackingManager);
+            manager = ctx.scene.addComponent(NeedleFaceFilterTrackingManager, { maxFaces: maxFaces });
             filter = new FaceMeshTexture({
                 layout: layout,
                 texture: {
@@ -68,7 +79,7 @@ onStart(async ctx => {
                 }
             }
 
-            manager = ctx.scene.addComponent(NeedleFaceFilterTrackingManager);
+            manager = ctx.scene.addComponent(NeedleFaceFilterTrackingManager, { maxFaces: maxFaces });
             filter = await FaceFilterRoot.create(facefilterValue, {
                 scale: Number.isNaN(facefilterScale) ? 1 : facefilterScale || 1,
                 offset: faceFilterOffset,
@@ -85,6 +96,7 @@ onStart(async ctx => {
             return;
         }
 
+
         // Handle runtime updating of the filter attribute
         const observer = new MutationObserver(function (mutations) {
             mutations.forEach(mutation => {
@@ -92,9 +104,15 @@ onStart(async ctx => {
                     case "attributes":
                         const newValue = ctx.domElement.getAttribute("face-filter");
                         if (newValue !== facefilterValue) {
+                            console.debug(`Face filter changed from "${facefilterValue}" to "${newValue}"`);
                             if (filter instanceof FaceMeshTexture) {
                                 if (newValue && isImage(newValue)) {
                                     filter.updateTexture(newValue);
+
+                                    for(const obj of manager.getActiveFaceObjects()) {
+                                        const faceMesh = obj.instance?.getComponentInChildren(FaceMeshTexture);
+                                        faceMesh?.updateTexture(newValue);
+                                    }
                                 }
                             }
                         }
