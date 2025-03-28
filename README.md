@@ -59,7 +59,7 @@ Then see the code below or [full examples](#examples):
 
 ### Face Filter with HTML only
 
-See full examples in `/examples/html/`   
+See full examples in [/examples/html/](/package/examples/)   
 
 #### Supported attributes
 
@@ -72,12 +72,30 @@ See full examples in `/examples/html/`
 | `face-filter-offset` | (optional, 3D only) Offset the 3D face filter model (e.g. `face-filter-offset="0.0, 0.1, 0.1"`)
 
 
+#### HTML Example
 ```html
+<head>
+    <script type="importmap">
+        {
+          "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/@needle-tools/engine@4.4.0-alpha.5/dist/three.min.js",
+            "@needle-tools/engine": "https://cdn.jsdelivr.net/npm/@needle-tools/engine@4.4.0-alpha.5/dist/needle-engine.min.js",
+            "@needle-tools/facefilter": "https://cdn.jsdelivr.net/npm/@needle-tools/facefilter/dist/facefilter.min.js"
+          }
+        }
+    </script>
+    <script type="module" src="https://cdn.jsdelivr.net/npm/@needle-tools/facefilter/dist/facefilter.min.js"></script>
+</head>
+
+<body style="margin:0; padding:0;">
     <needle-engine
+        background-color="#ffffdd"
         face-filter="https://cdn.needle.tools/static/facefilter/facemask-template-procreate.webp"
         face-filter-mask="https://cdn.needle.tools/static/facefilter/facemask-occlusion-procreate.webp"
-        face-filter-layout="procreate">
+        face-filter-layout="procreate"
+        >
     </needle-engine>
+</body>
 ```
 
 
