@@ -163,6 +163,7 @@ export class VideoRenderer {
             this._videoQuad.scale
                 .set(aspect, -1, 1)
                 .multiplyScalar(far * Math.tan(this.context.mainCamera.fov * Math.PI / 180 / 2) * 2);
+            this._videoQuad.visible = this.owner.showVideo;
         }
     }
 

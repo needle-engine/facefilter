@@ -97,26 +97,49 @@ onStart(async ctx => {
         }
 
 
+        updateShowVideo(manager, ctx.domElement);
+
+        const videoSelector = ctx.domElement.getAttribute("face-filter-video-selector");
+        if(videoSelector) {
+            const videoElement = document.querySelector(videoSelector) as HTMLVideoElement;
+            if(!videoElement) console.error(`Video element not found for selector "${videoSelector}"`);
+            else { 
+                console.debug(`Using video element "${videoSelector}"`);
+                manager.video = videoElement;
+            }
+        }
+
+
         // Handle runtime updating of the filter attribute
         const observer = new MutationObserver(function (mutations) {
             mutations.forEach(mutation => {
                 switch (mutation.type) {
                     case "attributes":
-                        const newValue = ctx.domElement.getAttribute("face-filter");
-                        if (newValue !== facefilterValue) {
-                            console.debug(`Face filter changed from "${facefilterValue}" to "${newValue}"`);
-                            if (filter instanceof FaceMeshTexture) {
-                                if (newValue && isImage(newValue)) {
-                                    filter.updateTexture(newValue);
+                        switch (mutation.attributeName) {
+                            case "face-filter": {
+                                const newValue = ctx.domElement.getAttribute("face-filter");
+                                if (newValue !== facefilterValue) {
+                                    console.debug(`Face filter changed from "${facefilterValue}" to "${newValue}"`);
+                                    if (filter instanceof FaceMeshTexture) {
+                                        if (newValue && isImage(newValue)) {
+                                            filter.updateTexture(newValue);
 
-                                    for(const obj of manager.getActiveFaceObjects()) {
-                                        const faceMesh = obj.instance?.getComponentInChildren(FaceMeshTexture);
-                                        faceMesh?.updateTexture(newValue);
+                                            for (const obj of manager.getActiveFaceObjects()) {
+                                                const faceMesh = obj.instance?.getComponentInChildren(FaceMeshTexture);
+                                                faceMesh?.updateTexture(newValue);
+                                            }
+                                        }
                                     }
                                 }
                             }
+                            break;
+
+                            case "face-filter-video": {
+                                updateShowVideo(manager, ctx.domElement);
+                            }
+                            break;
                         }
-                        break;
+
                 }
             })
         });
@@ -124,6 +147,17 @@ onStart(async ctx => {
 
     }
 });
+
+function updateShowVideo(filter: NeedleFaceFilterTrackingManager, domElement:HTMLElement) {
+    const attributeValue = domElement.getAttribute("face-filter-show-video");
+    if(attributeValue === null || attributeValue === undefined) {
+        filter.showVideo = true;
+    }
+    else {
+        filter.showVideo = attributeValue === "true" || attributeValue === "1" || attributeValue === "yes" || attributeValue === "on" || attributeValue?.length === 0;
+    }
+
+}
 
 function isImage(str: string) {
     return str.toLowerCase().match(/\.(jpeg|jpg|png|webp)$/);

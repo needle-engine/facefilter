@@ -1,6 +1,6 @@
 {
   "name": "@needle-tools/facefilter",
-  "version": "1.0.0-beta.9",
+  "version": "1.0.0-beta.10",
   "description": "Needle Engine FaceFilter",
   "main": "index.ts",
   "exports": {
@@ -39,6 +39,7 @@
     "registry": "https://registry.npmjs.org/"
   },
   "scripts": {
+    "dev": "npx nodemon --watch src --ext ts,tsx --exec \"npm run compile\"",
     "prepublishOnly": "npx --yes needle-tools/npm-publish-helper",
     "compile": "npx --yes needle-tools/npm-publish-helper compile"
   },

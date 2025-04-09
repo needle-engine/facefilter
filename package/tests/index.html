@@ -7,21 +7,22 @@
           "imports": {
             "three": "https://cdn.jsdelivr.net/npm/@needle-tools/engine@4.4.0-alpha.5/dist/three.min.js",
             "@needle-tools/engine": "https://cdn.jsdelivr.net/npm/@needle-tools/engine@4.4.0-alpha.5/dist/needle-engine.min.js",
-            "@needle-tools/facefilter": "https://cdn.jsdelivr.net/npm/@needle-tools/facefilter/dist/facefilter.min.js"
+            "@needle-tools/facefilter": "../dist/facefilter.min.js"
           }
         }
     </script>
-    <script type="module" src="https://cdn.jsdelivr.net/npm/@needle-tools/facefilter/dist/facefilter.min.js"></script>
+    <script type="module" src="../dist/facefilter.min.js"></script>
 </head>
 
 <body style="margin:0; padding:0;">
-    <needle-engine
-        background-color="#ffffdd"
+    <video id="myvideo" style="position:fixed;z-index:999;width:200px;height:200px"></video>
+    <needle-engine background-color="#ffffdd"
         face-filter="https://cdn.needle.tools/static/facefilter/facemask-template-procreate.webp"
         face-filter-mask="https://cdn.needle.tools/static/facefilter/facemask-occlusion-procreate.webp"
-        face-filter-layout="procreate"
-        face-filter-max-faces="2"
-        face-filter-show-video="1"
+        face-filter-layout="procreate" 
+        face-filter-max-faces="2" 
+        face-filter-show-video="0"
+        face-filter-video-selector="#myvideo"
         >
     </needle-engine>
 </body>

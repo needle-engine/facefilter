@@ -103,6 +103,15 @@ export class NeedleFilterTrackingManager extends Behaviour {
     get video() {
         return this._video;
     }
+    set video(value: HTMLVideoElement) {
+        if (this._video && value !== this._video) {
+            console.warn("[FaceFilterTrackingManager] The video element is already set. Updating the video element at runtime is not supported");
+        }
+        else {
+            console.debug("[FaceFilterTrackingManager] Set video element");
+            this._video = value;
+        }
+    }
     /** Width of the current video in pixel */
     get videoWidth() {
         return this._video.videoWidth;
@@ -111,6 +120,18 @@ export class NeedleFilterTrackingManager extends Behaviour {
     get videoHeight() {
         return this._video.videoHeight;
     }
+    /**
+     * Set the video to be visible. 
+     * @default true
+     * @returns {boolean} true if the video is visible, false if not
+     */
+    get showVideo() {
+        return this._showVideo;
+    }
+    set showVideo(visible: boolean) {
+        this._showVideo = visible;
+    }
+    private _showVideo: boolean = true;
 
     /**
      * The last result received from the face detector
@@ -321,10 +342,13 @@ export class NeedleFilterTrackingManager extends Behaviour {
         console.debug("Detectors loaded!");
 
         // create and start the video playback
-        this._video = document.createElement("video");
-        this._video.autoplay = true;
-        this._video.playsInline = true;
-        this._video.style.display = "none";
+        if(!this._video) {
+            // If no video element was assigned by the user
+            this._video = document.createElement("video");
+            this._video.style.display = "none";
+            this._video.autoplay = true;
+            this._video.playsInline = true;
+        }
         this.startCamera(this._video);
     }
     /** @internal */
