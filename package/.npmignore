@@ -3,3 +3,4 @@ node_modules
 *.code-workspace
 tsconfig.json
 compile.mjs
+./tests
