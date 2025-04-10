@@ -39,7 +39,7 @@
     "registry": "https://registry.npmjs.org/"
   },
   "scripts": {
-    "dev": "npx nodemon --watch src --ext ts,tsx --exec \"npm run compile\"",
+    "dev": "npx nodemon --watch src/**/* --ext ts,tsx --exec \"npm run compile\"",
     "prepublishOnly": "npx --yes needle-tools/npm-publish-helper",
     "compile": "npx --yes needle-tools/npm-publish-helper compile"
   },
