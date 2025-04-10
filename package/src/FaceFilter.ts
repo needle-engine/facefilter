@@ -699,7 +699,7 @@ export class NeedleFilterTrackingManager extends Behaviour {
 
         if (this._handObjects.length != hand.length) {
             for (let i = 0; i < hand.length; i++) {
-                const obj = ObjectUtils.createPrimitive("Sphere", { scale: .1, color: "red" });
+                const obj = ObjectUtils.createPrimitive("Sphere", { scale: .3, color: "red" });
                 this._handObjects.push(obj);
             }
         }
