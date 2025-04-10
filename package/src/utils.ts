@@ -1,6 +1,6 @@
-import { Camera, Material, Matrix4, Object3D, DoubleSide, MeshBasicMaterial, Mesh } from "three";
+import { Camera, Material, Matrix4, Object3D, DoubleSide, MeshBasicMaterial, Mesh, Vector3Like, PerspectiveCamera, Vector2Like } from "three";
 import { Category, FaceLandmarker, FaceLandmarkerResult, FilesetResolver, HandLandmarker, ImageSegmenter, Matrix, PoseLandmarker } from "@mediapipe/tasks-vision"
-import { OneEuroFilter, Renderer } from "@needle-tools/engine";
+import { getTempVector, OneEuroFilter, Renderer } from "@needle-tools/engine";
 import { mirror } from "./settings.js";
 import { OneEuroFilterMatrix4 } from "./utils.filter.js";
 
@@ -48,8 +48,58 @@ export namespace FacefilterUtils {
         //         obj.matrix.elements[i] = Mathf.lerp(obj.matrix.elements[i], matrix.elements[i], 0.3);
         //     }
         // }
+    }
 
+    function getNormalizedDistance(p1x: number, p1y: number, p2x: number, p2y: number) {
+        const dx = p1x - p2x;
+        const dy = p1y - p2y;
+        return Math.sqrt(dx * dx + dy * dy);
+    }
+    const REFERENCE_DEPTH = -1.5; // The Z distance in Three.js units where you measured
+    const REFERENCE_APPARENT_SIZE = .3; // The measured normalized distance (e.g., wrist-to-middleMCP) at REFERENCE_DEPTH
+    export function calculateDepth(landmark1: Vector3Like, landmark2: Vector3Like) {
+        const currentApparentSize = getNormalizedDistance(landmark1.x, landmark1.y, landmark2.x, landmark2.y);
+        let estimatedWristDepth = REFERENCE_DEPTH;
+        // console.debug(currentApparentSize);
+        if (currentApparentSize > 0.0001) {
+            estimatedWristDepth = REFERENCE_DEPTH * (REFERENCE_APPARENT_SIZE / currentApparentSize);
+        }
+        return estimatedWristDepth;
+    }
 
+    export function normalizedLandmarkerToWorld(landmark: Vector3Like, camera: PerspectiveCamera, videoWidth: number, videoHeight: number, baseDepth = -.3, zScaleFactor = 1) {
+
+        const aspect = videoWidth / videoHeight;
+
+        // TODO: precalculate this
+        const fovInRadians = camera.fov * (Math.PI / 180);
+        const ZdistanceFromCamera = Math.abs(baseDepth - camera.position.z); // Distance to reference plane
+        const heightAtBaseDepth = 2 * Math.tan(fovInRadians / 2) * ZdistanceFromCamera;
+        const widthAtBaseDepth = heightAtBaseDepth * aspect;
+
+        const lmz = landmark.z;
+        const depthOffsetWorld = lmz * widthAtBaseDepth * zScaleFactor;
+        const targetZ = baseDepth + depthOffsetWorld;
+
+        const distanceToLandmark = Math.abs(targetZ - camera.position.z);
+        const heightAtTargetZ = 2 * Math.tan(fovInRadians / 2) * distanceToLandmark;
+        const widthAtTargetZ = heightAtTargetZ * aspect; // Or imageWidth / imageHeight
+
+        const ndcX = landmark.x * 2 - 1;
+        const ndcY = 1 - landmark.y * 2; // Invert Y
+
+        // World coords relative to camera's view center at targetZ
+        const worldX_rel = -ndcX * (widthAtTargetZ / 2);
+        const worldY_rel = ndcY * (heightAtTargetZ / 2);
+
+        // Add camera's position to get final world coords
+        // (Assumes camera looks directly down -Z axis without rotation)
+        // If camera is rotated, you need more complex unprojection using matrices or camera.unproject
+        const finalWorldX = camera.position.x + worldX_rel;
+        const finalWorldY = camera.position.y + worldY_rel;
+        const finalWorldZ = targetZ;
+
+        return getTempVector(finalWorldX, finalWorldY, finalWorldZ);
     }
 
     export function getBlendshape(result: FaceLandmarkerResult | null, shape: BlendshapeName, index: number = 0): Category | null {
@@ -247,7 +297,7 @@ export namespace MediapipeHelper {
                 numHands: opts?.maxHands || 2,
                 canvas: opts?.canvas,
             }
-        )); 
+        ));
     }
 
     export function createPoseLandmarker(opts?: MediapipeOpts): Promise<PoseLandmarker | null> {
@@ -279,9 +329,9 @@ export namespace MediapipeHelper {
             }
         ));
     }
-    
 
-    
+
+
     function flip(results: FaceLandmarkerResult, i0: number, i1: number) {
         if (results.facialTransformationMatrixes) {
             const mat0 = results.facialTransformationMatrixes[i0];
@@ -307,7 +357,7 @@ export namespace MediapipeHelper {
     const bsfilters = new Array<OneEuroFilter>();
     const matrixFilters = new Array<OneEuroFilterMatrix4>();
     const tempMatrix = new Matrix4();
-    
+
     export function applyFiltering(results: FaceLandmarkerResult, time: number) {
 
         // if we have multiple faces we need to sort them (left to right)
