@@ -1,5 +1,5 @@
 import { Camera, Material, Matrix4, Object3D, DoubleSide, MeshBasicMaterial, Mesh } from "three";
-import { Category, FaceLandmarker, FaceLandmarkerResult, FilesetResolver, ImageSegmenter, Matrix, PoseLandmarker } from "@mediapipe/tasks-vision"
+import { Category, FaceLandmarker, FaceLandmarkerResult, FilesetResolver, HandLandmarker, ImageSegmenter, Matrix, PoseLandmarker } from "@mediapipe/tasks-vision"
 import { OneEuroFilter, Renderer } from "@needle-tools/engine";
 import { mirror } from "./settings.js";
 import { OneEuroFilterMatrix4 } from "./utils.filter.js";
@@ -179,9 +179,10 @@ declare interface WasmFileset {
     assetBinaryPath?: string;
 }
 type MediapipeOpts = {
-    maxFaces?: number,
     files?: Promise<WasmFileset | null>,
     canvas?: HTMLCanvasElement,
+    maxFaces?: number,
+    maxHands?: number,
 }
 
 let wasm_files: Promise<WasmFileset | null> | null = null;
@@ -233,6 +234,20 @@ export namespace MediapipeHelper {
                 canvas: opts?.canvas,
             }
         ));
+    }
+
+    export function createHandLandmarker(opts?: MediapipeOpts): Promise<HandLandmarker | null> {
+        return ensureWasmIsLoaded(opts, files => HandLandmarker.createFromOptions(files,
+            {
+                runningMode: "VIDEO",
+                baseOptions: {
+                    delegate: "GPU",
+                    modelAssetPath: "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/latest/hand_landmarker.task",
+                },
+                numHands: opts?.maxHands || 2,
+                canvas: opts?.canvas,
+            }
+        )); 
     }
 
     export function createPoseLandmarker(opts?: MediapipeOpts): Promise<PoseLandmarker | null> {

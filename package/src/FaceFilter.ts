@@ -1,5 +1,5 @@
 import { AssetReference, Behaviour, ClearFlags, GameObject, getIconElement, getParam, instantiate, isDevEnvironment, isMobileDevice, ObjectUtils, PromiseAllWithErrors, serializable, setParamWithoutReload, showBalloonMessage } from '@needle-tools/engine';
-import { FaceLandmarker, DrawingUtils, FaceLandmarkerResult, PoseLandmarker, PoseLandmarkerResult, ImageSegmenter, ImageSegmenterResult, Matrix } from "@mediapipe/tasks-vision";
+import { FaceLandmarker, DrawingUtils, FaceLandmarkerResult, PoseLandmarker, PoseLandmarkerResult, ImageSegmenter, ImageSegmenterResult, Matrix, HandLandmarker, HandLandmarkerResult } from "@mediapipe/tasks-vision";
 import { BlendshapeName, FacefilterUtils, MediapipeHelper } from './utils.js';
 import { Object3D, Texture } from 'three';
 import { NeedleRecordingHelper } from './RecordingHelper.js';
@@ -43,6 +43,9 @@ export class NeedleFilterTrackingManager extends Behaviour {
      */
     @serializable()
     maxFaces: number = 1;
+
+    @serializable()
+    maxHands: number = 2;
 
     /**
      * The 3D object that will be attached to the face
@@ -306,6 +309,8 @@ export class NeedleFilterTrackingManager extends Behaviour {
     /** Face detector */
     private _facelandmarker: FaceLandmarker | null = null;
 
+    private _handlandmarker: HandLandmarker | null = null;
+
     /**  Pose detector / provides segmentation  */
     private _poselandmarker: PoseLandmarker | null = null;
 
@@ -323,10 +328,18 @@ export class NeedleFilterTrackingManager extends Behaviour {
     async awake() {
         const tasks = new Array<Promise<any>>();
 
-        tasks.push(MediapipeHelper.createFaceLandmarker({
-            maxFaces: this.maxFaces,
-            // canvas: this.context.renderer.domElement,
-        }).then(res => this._facelandmarker = res));
+        if (this.maxFaces > 0) {
+            tasks.push(MediapipeHelper.createFaceLandmarker({
+                maxFaces: this.maxFaces,
+                // canvas: this.context.renderer.domElement,
+            }).then(res => this._facelandmarker = res));
+        }
+
+        if(this.maxHands > 0) {
+            tasks.push(MediapipeHelper.createHandLandmarker({
+                maxHands: this.maxHands
+            }).then(res => this._handlandmarker = res));
+        }
 
         // TODO: doesn't work yet 
         // tasks.push(MediapipeHelper.createPoseLandmarker({
@@ -342,7 +355,7 @@ export class NeedleFilterTrackingManager extends Behaviour {
         console.debug("Detectors loaded!");
 
         // create and start the video playback
-        if(!this._video) {
+        if (!this._video) {
             // If no video element was assigned by the user
             this._video = document.createElement("video");
             this._video.style.display = "none";
@@ -487,6 +500,7 @@ export class NeedleFilterTrackingManager extends Behaviour {
 
     /** The last landmark result received */
     private _lastFaceLandmarkResults: FaceLandmarkerResult | null = null;
+    private _lastHandLandmarkResults: HandLandmarkerResult | null = null;
     private _lastPoseLandmarkResults: PoseLandmarkerResult | null = null;
     private _lastImageSegmentationResults: ImageSegmenterResult | null = null;
 
@@ -522,8 +536,12 @@ export class NeedleFilterTrackingManager extends Behaviour {
 
         // Update face results - the extra check is because of Safari iOS
         if (this._facelandmarker && ("detectForVideo" in this._facelandmarker)) {
-            this._lastFaceLandmarkResults = this._facelandmarker.detectForVideo(this._video, performance.now());;
+            this._lastFaceLandmarkResults = this._facelandmarker.detectForVideo(this._video, performance.now());
         }
+
+        if(this._handlandmarker && ("detectForVideo" in this._handlandmarker)) {
+            this._lastHandLandmarkResults = this._handlandmarker.detectForVideo(this._video, performance.now());
+        } 
 
         if (this._poselandmarker && ("detectForVideo" in this._poselandmarker)) {
             this._lastPoseLandmarkResults = this._poselandmarker.detectForVideo(this._video, performance.now());
@@ -545,15 +563,21 @@ export class NeedleFilterTrackingManager extends Behaviour {
             this._videoRenderer?.onUpdate();
         }
 
+        this.updateDebugRendering();
+
         const faceResults = this._lastFaceLandmarkResults;
         if (faceResults) {
-            this.updateDebug(faceResults);
 
             for (let i = 0; i < faceResults.facialTransformationMatrixes.length; i++) {
                 const state = this._states[i];
                 const matrix = faceResults.facialTransformationMatrixes[i];
                 state?.render(matrix);
             }
+        }
+
+        const handResults = this._lastHandLandmarkResults;
+        if(handResults) {
+
         }
     }
 
@@ -692,7 +716,7 @@ export class NeedleFilterTrackingManager extends Behaviour {
     }
 
 
-    private _debug = false;
+    private _debug = getParam("debugfacefilter");
     private _debugDrawing: DrawingUtils | null = null;
     private _debugContainer: HTMLDivElement | null = null;
     private _debugCanvas: HTMLCanvasElement | null = null;
@@ -703,7 +727,7 @@ export class NeedleFilterTrackingManager extends Behaviour {
             return;
         }
         const key = evt.key.toLowerCase();
-        if (this._debug && key) {
+        if (this._debug && key === "f") {
             this.toggleDebug();
         }
         switch (key) {
@@ -721,7 +745,7 @@ export class NeedleFilterTrackingManager extends Behaviour {
     private toggleDebug = () => {
         this._debug = !this._debug;
     }
-    private updateDebug(res: FaceLandmarkerResult) {
+    private updateDebugRendering() {
         if (!this._video) return;
         if (!this._debug) {
             if (this._debugContainer) {
@@ -763,11 +787,11 @@ export class NeedleFilterTrackingManager extends Behaviour {
                 width: auto;
                 top: 50%;
                 left: 50%; 
-                transform: translate(-50%, -50%);
+                transform: translate(-50%, -50%) scaleX(-1);
                 display: block;
-                opacity: .5;
             `;
             this._debugCanvas.style.cssText = this._video.style.cssText;
+            this._video.style.opacity = "0.2";
 
         };
         if (this._debugContainer)
@@ -778,19 +802,26 @@ export class NeedleFilterTrackingManager extends Behaviour {
             const ctx = this._debugCanvas.getContext("2d");
             ctx?.clearRect(0, 0, this._debugCanvas.width, this._debugCanvas.height);
         }
-        res.faceLandmarks?.forEach((landmarks) => {
+        this._lastFaceLandmarkResults?.faceLandmarks?.forEach((landmarks) => {
             this._debugDrawing?.drawConnectors(landmarks, FaceLandmarker.FACE_LANDMARKS_CONTOURS, { color: "#55FF44", lineWidth: 1 });
         });
+        this._lastHandLandmarkResults?.landmarks?.forEach((landmarks) => {
+            this._debugDrawing?.drawConnectors(landmarks, HandLandmarker.HAND_CONNECTIONS, { color: "#55FF44", lineWidth: 1 });
+        });
+
 
         this._lastPoseLandmarkResults?.landmarks.forEach((landmarks) => {
+            this._debugDrawing?.drawLandmarks(landmarks, { color: "#FF44FF", lineWidth: 1 });
+        });
+        this._lastHandLandmarkResults?.landmarks.forEach((landmarks) => {
             this._debugDrawing?.drawLandmarks(landmarks, { color: "#FF44FF", lineWidth: 1 });
         });
         // this._lastPoseLandmarkResults?.segmentationMasks?.forEach((mask) => {
         //     this._debugDrawing?.drawCategoryMask(mask, [[1, 1, 1, 1]]);
         // });
 
-        if (res.faceLandmarks.length > 0) {
-            for (let i = 0; i < res.facialTransformationMatrixes.length; i++) {
+        if (this._lastFaceLandmarkResults?.faceLandmarks.length) {
+            for (let i = 0; i < this._lastFaceLandmarkResults.facialTransformationMatrixes.length; i++) {
                 if (!this._debugObjects[i]) {
                     const obj = new Object3D();
                     ObjectUtils.createPrimitive("ShaderBall", {
@@ -800,7 +831,7 @@ export class NeedleFilterTrackingManager extends Behaviour {
                     this._debugObjects[i] = obj;
                 }
                 const obj = this._debugObjects[i];
-                const matrix = res.facialTransformationMatrixes[i];
+                const matrix = this._lastFaceLandmarkResults.facialTransformationMatrixes[i];
                 FacefilterUtils.applyFaceLandmarkMatrixToObject3D(obj, matrix, this.context.mainCamera);
             }
         }
