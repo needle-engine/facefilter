@@ -1,5 +1,5 @@
 import { Animator, AssetReference, Behaviour, isDevEnvironment, Mathf, NEEDLE_progressive, serializable } from '@needle-tools/engine';
-import type { NeedleTrackingManager } from './FaceFilter.js';
+import type { NeedleTrackingManager } from './TrackingManager.js';
 import { BufferAttribute, Matrix4, Mesh, Object3D, SkinnedMesh, Vector3, Vector3Like } from 'three';
 import { BlendshapeName, FacefilterUtils } from './utils.js';
 
