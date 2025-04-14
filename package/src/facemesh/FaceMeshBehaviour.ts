@@ -1,7 +1,7 @@
 import { serializable, NEEDLE_progressive, Application } from "@needle-tools/engine";
 import { Texture, Mesh, Matrix4, MeshBasicMaterial, Vector3, Material, VideoTexture, ShaderMaterial, TextureLoader } from "three";
 import { FilterBehaviour } from "../Behaviours.js";
-import { NeedleFilterTrackingManager } from "../FaceFilter.js";
+import { NeedleTrackingManager } from "../FaceFilter.js";
 import { FaceGeometry, FaceLayout } from "./utils.facemesh.js";
 
 export abstract class FaceMeshBehaviour extends FilterBehaviour {
@@ -78,7 +78,7 @@ export abstract class FaceMeshBehaviour extends FilterBehaviour {
     private _lastFilterIndex: number = -1;
 
     /** @internal */
-    onResultsUpdated(filter: NeedleFilterTrackingManager, index: number): void {
+    onResultsUpdated(filter: NeedleTrackingManager, index: number): void {
         const lm = filter.facelandmarkerResult?.faceLandmarks;
         if (lm && lm.length > 0) {
 
@@ -117,7 +117,7 @@ export abstract class FaceMeshBehaviour extends FilterBehaviour {
     }
 
     /** Updates the matrix of the mesh to match the aspect ratio of the video */
-    private updateMatrix(filter: NeedleFilterTrackingManager) {
+    private updateMatrix(filter: NeedleTrackingManager) {
         const mesh = this.__currentMesh;
         if (!mesh) return;
 

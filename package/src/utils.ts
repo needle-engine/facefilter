@@ -73,7 +73,7 @@ export namespace FacefilterUtils {
 
         // TODO: precalculate this
         const fovInRadians = camera.fov * (Math.PI / 180);
-        const ZdistanceFromCamera = Math.abs(baseDepth - camera.position.z); // Distance to reference plane
+        const ZdistanceFromCamera = Math.abs(baseDepth); // Distance to reference plane
         const heightAtBaseDepth = 2 * Math.tan(fovInRadians / 2) * ZdistanceFromCamera;
         const widthAtBaseDepth = heightAtBaseDepth * aspect;
 
@@ -81,7 +81,7 @@ export namespace FacefilterUtils {
         const depthOffsetWorld = lmz * widthAtBaseDepth * zScaleFactor;
         const targetZ = baseDepth + depthOffsetWorld;
 
-        const distanceToLandmark = Math.abs(targetZ - camera.position.z);
+        const distanceToLandmark = Math.abs(targetZ);
         const heightAtTargetZ = 2 * Math.tan(fovInRadians / 2) * distanceToLandmark;
         const widthAtTargetZ = heightAtTargetZ * aspect; // Or imageWidth / imageHeight
 
@@ -95,8 +95,8 @@ export namespace FacefilterUtils {
         // Add camera's position to get final world coords
         // (Assumes camera looks directly down -Z axis without rotation)
         // If camera is rotated, you need more complex unprojection using matrices or camera.unproject
-        const finalWorldX = camera.position.x + worldX_rel;
-        const finalWorldY = camera.position.y + worldY_rel;
+        const finalWorldX = worldX_rel;
+        const finalWorldY = worldY_rel;
         const finalWorldZ = targetZ;
 
         return getTempVector(finalWorldX, finalWorldY, finalWorldZ);
@@ -238,6 +238,7 @@ type MediapipeOpts = {
 let wasm_files: Promise<WasmFileset | null> | null = null;
 
 export namespace MediapipeHelper {
+
 
     export function createFiles(): Promise<WasmFileset | null> {
         if (wasm_files) {
