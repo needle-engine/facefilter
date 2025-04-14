@@ -229,11 +229,11 @@ export class FaceFilterRoot extends Behaviour {
 
 
 export interface IFilterBehaviour {
-    onResultsUpdated(filter: NeedleTrackingManager, index: number): void;
+    onResultsUpdated(manager: NeedleTrackingManager, index: number): void;
 }
 
 export abstract class FilterBehaviour extends Behaviour implements IFilterBehaviour {
-    abstract onResultsUpdated(_filter: NeedleTrackingManager, index: number): void;
+    abstract onResultsUpdated(manager: NeedleTrackingManager, index: number): void;
 }
 
 /**

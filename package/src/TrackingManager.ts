@@ -6,6 +6,7 @@ import { NeedleRecordingHelper } from './RecordingHelper.js';
 import { FaceFilterRoot, FilterBehaviour } from './Behaviours.js';
 import { mirror } from './settings.js';
 import { VideoRenderer } from './VideoRenderer.js';
+import { HandTrackingBehaviour } from './hands/HandTrackingBehaviour.js';
 
 const debug = getParam("debugfilter");
 
@@ -412,14 +413,24 @@ export class NeedleTrackingManager extends Behaviour {
         imageSegmentation?.close();
     }
 
-    private async startCamera(video: HTMLVideoElement) {
+    private async startCamera(video: HTMLVideoElement, tries: number = 0) {
         // Use camera stream
         const constraints = { video: true, audio: false };
         const stream = await navigator.mediaDevices.getUserMedia(constraints).catch((e) => {
+            if (tries <= 2) {
+                setTimeout(() => {
+                    if (this.activeAndEnabled) this.startCamera(video, tries + 1);
+                }, 300);
+                return null;
+            }
             if (isDevEnvironment()) showBalloonWarning(`Could not start camera: ${e.message}. Perhaps you need to allow camera access?`);
             console.error("[Needle Tracking] Could not start camera: " + e.message);
             return null;
         });
+        if (!stream) {
+            return;
+        }
+
         video.srcObject = stream;
         video.muted = true;
         const onReady = () => {
@@ -943,7 +954,7 @@ function getTaskRunner<T>(runner: null | T | Promise<T>): T | null {
 }
 
 
-class FaceInstance {
+export class FaceInstance {
     readonly manager: NeedleTrackingManager;
     get context() { return this.manager.context; }
     get lastUpdateTime() { return this._lastUpdateTime }
@@ -1059,55 +1070,97 @@ class FaceInstance {
 
 
 
-class HandInstance {
+export class HandInstance {
     readonly manager: NeedleTrackingManager;
     get context() { return this.manager.context; }
+    get timeSinceLastUpdate() { return this._lastUpdateTime; }
+
     constructor(manager: NeedleTrackingManager) {
         this.manager = manager;
     }
 
     private _lastUpdateTime: number = -1;
+    private readonly _behaviours: HandTrackingBehaviour[] = [];
+
     private _handObjects: Object3D[] = [];
+    private _handModel: Promise<Object3D | null> | Object3D | null = null;
 
     render(results: HandLandmarkerResult, index: number) {
 
         // https://ai.google.dev/edge/mediapipe/solutions/vision/hand_landmarker/web_js?hl=en#handle_and_display_results
 
-        const hand = results.landmarks[index];
-        if (!hand) { return; }
+        const side = results.handedness[index][0]?.categoryName;
+        const isLeft = side === "Left";
+
+        const handLm = results.landmarks[index];
+        if (!handLm) { return; }
 
         const camera = this.context.mainCamera;
         if (!(camera instanceof PerspectiveCamera)) { return; }
 
+        this._lastUpdateTime = this.context.time.realtimeSinceStartup;
 
 
-        const wrist = hand[MediapipeHelper.getJointIndex("wrist")];
-        const middleMCP = hand[MediapipeHelper.getJointIndex("middle_finger_mcp")];
+        const wrist = handLm[MediapipeHelper.getJointIndex("wrist")];
+        const middleMCP = handLm[MediapipeHelper.getJointIndex("middle_finger_mcp")];
         const depth = FacefilterUtils.calculateDepth(wrist, middleMCP);
 
-        if (this._handObjects.length != hand.length) {
-            for (let i = 0; i < hand.length; i++) {
+
+        if (this._handObjects.length === 0) {
+
+            if (!this._handModel) {
+                const url = `https://cdn.jsdelivr.net/npm/@webxr-input-profiles/assets@1.0/dist/profiles/generic-hand/${isLeft ? "left" : "right"}.glb`;
+                this._handModel = AssetReference.getOrCreateFromUrl(url).instantiate().then((model) => {
+                    if (model) {
+                        const beh = model.getOrAddComponent(HandTrackingBehaviour)
+                        console.log("Loaded Hand", model, beh);
+                        this._behaviours.push(beh);
+                        this.context.scene.add(model)
+                        return model;
+                    }
+                    return null;
+                });
+            }
+
+            for (let i = 0; i < handLm.length; i++) {
                 const obj = ObjectUtils.createPrimitive("Sphere", {
                     scale: .3,
-                    color: (i / hand.length) * 0xFFFFFF
+                    color: (i / handLm.length) * 0xFFFFFF
                 });
                 this._handObjects.push(obj);
+
             }
         }
-        for (let i = 0; i < hand.length; i++) {
+
+        // debug rendering
+        for (let i = 0; i < handLm.length; i++) {
             const obj = this._handObjects[i];
-            const segment = hand[i];
-            const pos = FacefilterUtils.normalizedLandmarkerToWorld(segment, camera, this.manager.videoWidth, this.manager.videoHeight, depth);
-            if (obj.parent != camera) camera.add(obj);
-            obj.position.copy(pos);
-            // obj.position.lerp(pos, this.context.time.deltaTime / .033);
+            if (obj) {
+                const segment = handLm[i];
+                const pos = FacefilterUtils.normalizedLandmarkerToCamera(segment, camera, this.manager.videoWidth, this.manager.videoHeight, depth);
+                if (obj.parent != camera) camera.add(obj);
+                obj.position.copy(pos);
+                // obj.position.lerp(pos, this.context.time.deltaTime / .033);
+            }
+        }
+
+        for (const beh of this._behaviours) {
+            if (!beh.activeAndEnabled) continue;
+            beh.onUpdateHandTracking(this, results, index, depth);
         }
     }
 
     remove() {
+        if (this._handModel) {
+            const model = this._handModel;
+            if (!(model instanceof Promise))
+                GameObject.destroy(model);
+            this._handModel = null;
+        }
         for (const obj of this._handObjects) {
-            GameObject.remove(obj);
+            GameObject.destroy(obj);
         }
         this._handObjects.length = 0;
+        this._behaviours.length = 0;
     }
 }
