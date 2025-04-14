@@ -1,5 +1,5 @@
 import { Context, ObjectUtils } from "@needle-tools/engine";
-import { type NeedleTrackingManager } from "./FaceFilter.js";
+import { type NeedleTrackingManager } from "./TrackingManager.js";
 import { CanvasTexture, IUniform, MeshBasicMaterial, Object3D, PerspectiveCamera, ShaderMaterial, Texture, Vector3, VideoTexture, WebGLRenderTarget } from "three";
 import { mirror } from "./settings.js";
 

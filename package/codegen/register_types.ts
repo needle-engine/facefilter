@@ -7,7 +7,7 @@ import { FaceFilterHeadPosition } from "../src/Behaviours.js";
 import { FaceFilterBlendshapes } from "../src/Behaviours.js";
 import { FaceFilterAnimator } from "../src/Behaviours.js";
 import { FaceFilterEyeBehaviour } from "../src/Behaviours.js";
-import { NeedleTrackingManager } from "../src/FaceFilter.js";
+import { NeedleTrackingManager } from "../src/TrackingManager.js";
 import { NeedleOcclusionMesh } from "../src/HelperComponents.js";
 import { NeedleBackgroundMesh } from "../src/HelperComponents.js";
 import { ReadyPlayerMeFacefilterSupport } from "../src/examples/ReadyPlayerMe.js";

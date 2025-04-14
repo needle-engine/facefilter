@@ -1,7 +1,7 @@
 import { serializable, NEEDLE_progressive, Application } from "@needle-tools/engine";
 import { Texture, Mesh, Matrix4, MeshBasicMaterial, Vector3, Material, VideoTexture, ShaderMaterial, TextureLoader } from "three";
 import { FilterBehaviour } from "../Behaviours.js";
-import { NeedleTrackingManager } from "../FaceFilter.js";
+import { NeedleTrackingManager } from "../TrackingManager.js";
 import { FaceGeometry, FaceLayout } from "./utils.facemesh.js";
 
 export abstract class FaceMeshBehaviour extends FilterBehaviour {

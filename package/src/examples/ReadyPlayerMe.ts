@@ -1,5 +1,5 @@
 import { AssetReference, Behaviour, findObjectOfType, getParam, setParamWithoutReload } from "@needle-tools/engine";
-import { NeedleTrackingManager } from "../FaceFilter.js";
+import { NeedleTrackingManager } from "../TrackingManager.js";
 
 
 /**
