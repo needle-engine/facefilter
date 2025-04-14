@@ -1,7 +1,7 @@
 import { Application, AssetReference, Behaviour, ClearFlags, GameObject, getIconElement, getParam, getTempVector, Gizmos, instantiate, isDevEnvironment, isMobileDevice, Mathf, ObjectUtils, PromiseAllWithErrors, serializable, setParamWithoutReload, showBalloonMessage, showBalloonWarning } from '@needle-tools/engine';
 import { FaceLandmarker, DrawingUtils, FaceLandmarkerResult, PoseLandmarker, PoseLandmarkerResult, ImageSegmenter, ImageSegmenterResult, Matrix, HandLandmarker, HandLandmarkerResult } from "@mediapipe/tasks-vision";
 import { BlendshapeName, FacefilterUtils, MediapipeHelper } from './utils.js';
-import { Object3D, PerspectiveCamera, Texture } from 'three';
+import { MeshBasicMaterial, MeshStandardMaterial, Object3D, PerspectiveCamera, Texture } from 'three';
 import { NeedleRecordingHelper } from './RecordingHelper.js';
 import { FaceFilterRoot, FilterBehaviour } from './Behaviours.js';
 import { mirror } from './settings.js';
@@ -727,7 +727,7 @@ export class NeedleTrackingManager extends Behaviour {
 
     private onHandLandmarkerResultsUpdated(handResults: HandLandmarkerResult | null) {
 
-        if(!handResults) {
+        if (!handResults) {
             this._hands.forEach((state) => state.remove());
             this._hands.length = 0;
             return;
@@ -1081,13 +1081,16 @@ class HandInstance {
 
 
 
-        const wrist = hand[0];
-        const middleMCP = hand[9];
+        const wrist = hand[MediapipeHelper.getJointIndex("wrist")];
+        const middleMCP = hand[MediapipeHelper.getJointIndex("middle_finger_mcp")];
         const depth = FacefilterUtils.calculateDepth(wrist, middleMCP);
 
         if (this._handObjects.length != hand.length) {
             for (let i = 0; i < hand.length; i++) {
-                const obj = ObjectUtils.createPrimitive("Sphere", { scale: .3, color: (i/hand.length) * 0xFFFFFF });
+                const obj = ObjectUtils.createPrimitive("Sphere", {
+                    scale: .3,
+                    color: (i / hand.length) * 0xFFFFFF
+                });
                 this._handObjects.push(obj);
             }
         }
@@ -1095,8 +1098,9 @@ class HandInstance {
             const obj = this._handObjects[i];
             const segment = hand[i];
             const pos = FacefilterUtils.normalizedLandmarkerToWorld(segment, camera, this.manager.videoWidth, this.manager.videoHeight, depth);
-            if(obj.parent != camera) camera.add(obj);
+            if (obj.parent != camera) camera.add(obj);
             obj.position.copy(pos);
+            // obj.position.lerp(pos, this.context.time.deltaTime / .033);
         }
     }
 

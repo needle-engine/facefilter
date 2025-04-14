@@ -6,7 +6,7 @@ export {
     NeedleTrackingManager as NeedleFaceFilterTrackingManager,
     NeedleTrackingManager as NeedleTrackingManager
 
-} from "./src/FaceFilter.js";
+} from "./src/TrackingManager.js";
 
 
 export {

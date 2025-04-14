@@ -396,4 +396,37 @@ export namespace MediapipeHelper {
         }
     }
 
+    export type HandKeypointName = "wrist" | "thumb_cmc" | "thumb_mcp" | "thumb_ip" | "thumb_tip" | "index_finger_mcp" | "index_finger_pip" | "index_finger_dip" | "index_finger_tip" | "middle_finger_mcp" | "middle_finger_pip" | "middle_finger_dip" | "middle_finger_tip" | "ring_finger_mcp" | "ring_finger_pip" | "ring_finger_dip" | "ring_finger_tip" | "pinky_mcp" | "pinky_pip" | "pinky_dip" | "pinky_tip";
+
+    /** 
+     * Get the index of a hand joint by its name.  
+     * @link https://ai.google.dev/edge/mediapipe/solutions/vision/hand_landmarker#models
+     */
+    export function getJointIndex(joint: HandKeypointName): number {
+        switch (joint) {
+            case "wrist": return 0;
+            case "thumb_cmc": return 1;
+            case "thumb_mcp": return 2;
+            case "thumb_ip": return 3;
+            case "thumb_tip": return 4;
+            case "index_finger_mcp": return 5;
+            case "index_finger_pip": return 6;
+            case "index_finger_dip": return 7;
+            case "index_finger_tip": return 8;
+            case "middle_finger_mcp": return 9;
+            case "middle_finger_pip": return 10;
+            case "middle_finger_dip": return 11;
+            case "middle_finger_tip": return 12;
+            case "ring_finger_mcp": return 13;
+            case "ring_finger_pip": return 14;
+            case "ring_finger_dip": return 15;
+            case "ring_finger_tip": return 16;
+            case "pinky_mcp": return 17;
+            case "pinky_pip": return 18;
+            case "pinky_dip": return 19;
+            case "pinky_tip": return 20;
+        }
+        return -1;
+    }
+
 }
