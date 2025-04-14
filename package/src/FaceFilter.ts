@@ -1,4 +1,4 @@
-import { Application, AssetReference, Behaviour, ClearFlags, GameObject, getIconElement, getParam, getTempVector, Gizmos, instantiate, isDevEnvironment, isMobileDevice, ObjectUtils, PromiseAllWithErrors, serializable, setParamWithoutReload, showBalloonMessage, showBalloonWarning } from '@needle-tools/engine';
+import { Application, AssetReference, Behaviour, ClearFlags, GameObject, getIconElement, getParam, getTempVector, Gizmos, instantiate, isDevEnvironment, isMobileDevice, Mathf, ObjectUtils, PromiseAllWithErrors, serializable, setParamWithoutReload, showBalloonMessage, showBalloonWarning } from '@needle-tools/engine';
 import { FaceLandmarker, DrawingUtils, FaceLandmarkerResult, PoseLandmarker, PoseLandmarkerResult, ImageSegmenter, ImageSegmenterResult, Matrix, HandLandmarker, HandLandmarkerResult } from "@mediapipe/tasks-vision";
 import { BlendshapeName, FacefilterUtils, MediapipeHelper } from './utils.js';
 import { Object3D, PerspectiveCamera, Texture } from 'three';
@@ -1087,7 +1087,7 @@ class HandInstance {
 
         if (this._handObjects.length != hand.length) {
             for (let i = 0; i < hand.length; i++) {
-                const obj = ObjectUtils.createPrimitive("Sphere", { scale: .3, color: "red" });
+                const obj = ObjectUtils.createPrimitive("Sphere", { scale: .3, color: (i/hand.length) * 0xFFFFFF });
                 this._handObjects.push(obj);
             }
         }
@@ -1095,7 +1095,7 @@ class HandInstance {
             const obj = this._handObjects[i];
             const segment = hand[i];
             const pos = FacefilterUtils.normalizedLandmarkerToWorld(segment, camera, this.manager.videoWidth, this.manager.videoHeight, depth);
-            camera.add(obj);
+            if(obj.parent != camera) camera.add(obj);
             obj.position.copy(pos);
         }
     }
