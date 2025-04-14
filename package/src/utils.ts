@@ -71,7 +71,6 @@ export namespace FacefilterUtils {
 
         const aspect = videoWidth / videoHeight;
 
-        // TODO: precalculate this
         const fovInRadians = camera.fov * (Math.PI / 180);
         const ZdistanceFromCamera = Math.abs(baseDepth); // Distance to reference plane
         const heightAtBaseDepth = 2 * Math.tan(fovInRadians / 2) * ZdistanceFromCamera;
