@@ -1,5 +1,5 @@
 import { Context, ObjectUtils } from "@needle-tools/engine";
-import { type NeedleFilterTrackingManager } from "./FaceFilter.js";
+import { type NeedleTrackingManager } from "./FaceFilter.js";
 import { CanvasTexture, IUniform, MeshBasicMaterial, Object3D, PerspectiveCamera, ShaderMaterial, Texture, Vector3, VideoTexture, WebGLRenderTarget } from "three";
 import { mirror } from "./settings.js";
 
@@ -34,9 +34,9 @@ class CustomVideoMaterial extends ShaderMaterial {
 
 export class VideoRenderer {
     readonly context: Context;
-    readonly owner: NeedleFilterTrackingManager;
+    readonly owner: NeedleTrackingManager;
 
-    constructor(owner: NeedleFilterTrackingManager) {
+    constructor(owner: NeedleTrackingManager) {
         this.context = owner.context
         this.owner = owner;
     }

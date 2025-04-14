@@ -1,5 +1,5 @@
 import { AssetReference, Behaviour, findObjectOfType, getParam, setParamWithoutReload } from "@needle-tools/engine";
-import { NeedleFilterTrackingManager } from "../FaceFilter.js";
+import { NeedleTrackingManager } from "../FaceFilter.js";
 
 
 /**
@@ -81,7 +81,7 @@ export class ReadyPlayerMeFacefilterSupport extends Behaviour {
         }
 
         if (str.startsWith("https://models.readyplayer.me")) {
-            const filter = findObjectOfType(NeedleFilterTrackingManager);
+            const filter = findObjectOfType(NeedleTrackingManager);
             const ref = AssetReference.getOrCreateFromUrl(str);
             setParamWithoutReload("readyplayerme", str);
             if (filter) {
