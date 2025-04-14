@@ -1,5 +1,5 @@
 import { Animator, AssetReference, Behaviour, isDevEnvironment, Mathf, NEEDLE_progressive, serializable } from '@needle-tools/engine';
-import type { NeedleFilterTrackingManager } from './FaceFilter.js';
+import type { NeedleTrackingManager } from './FaceFilter.js';
 import { BufferAttribute, Matrix4, Mesh, Object3D, SkinnedMesh, Vector3, Vector3Like } from 'three';
 import { BlendshapeName, FacefilterUtils } from './utils.js';
 
@@ -193,11 +193,11 @@ export class FaceFilterRoot extends Behaviour {
         })
     }
 
-    private _filter: NeedleFilterTrackingManager | null = null;
+    private _filter: NeedleTrackingManager | null = null;
     private _behaviours: FilterBehaviour[] = [];
     private _index: number = -1;
 
-    onResultsUpdated(filter: NeedleFilterTrackingManager, index: number) {
+    onResultsUpdated(filter: NeedleTrackingManager, index: number) {
         this._index = index;
         if (!this._filter) {
             this._filter = filter;
@@ -229,11 +229,11 @@ export class FaceFilterRoot extends Behaviour {
 
 
 export interface IFilterBehaviour {
-    onResultsUpdated(filter: NeedleFilterTrackingManager, index: number): void;
+    onResultsUpdated(filter: NeedleTrackingManager, index: number): void;
 }
 
 export abstract class FilterBehaviour extends Behaviour implements IFilterBehaviour {
-    abstract onResultsUpdated(_filter: NeedleFilterTrackingManager, index: number): void;
+    abstract onResultsUpdated(_filter: NeedleTrackingManager, index: number): void;
 }
 
 /**
@@ -290,7 +290,7 @@ export class FaceFilterBlendshapes extends FilterBehaviour {
             console.debug("Blendshape mapping", this.blendshapeMap);
     }
 
-    onResultsUpdated(filter: NeedleFilterTrackingManager, _index: number) {
+    onResultsUpdated(filter: NeedleTrackingManager, _index: number) {
         const face = filter.facelandmarkerResult?.faceBlendshapes?.[_index]
         if (face && this._skinnedMeshes.length > 0) {
 
@@ -350,7 +350,7 @@ export class FaceFilterAnimator extends FilterBehaviour {
         this._animators = this.gameObject.getComponentsInChildren(Animator);
     }
 
-    onResultsUpdated(filter: NeedleFilterTrackingManager, index: number): void {
+    onResultsUpdated(filter: NeedleTrackingManager, index: number): void {
         if (!this._animators?.length) return;
 
         const face = filter.facelandmarkerResult?.faceBlendshapes?.[index];
@@ -389,7 +389,7 @@ export class FaceFilterEyeBehaviour extends FilterBehaviour {
     @serializable(Object3D)
     eyeLeft: Object3D | null = null;
 
-    onResultsUpdated(_filter: NeedleFilterTrackingManager, index: number): void {
+    onResultsUpdated(_filter: NeedleTrackingManager, index: number): void {
         const face = _filter.facelandmarkerResult?.faceBlendshapes?.[index];
         if (!face) return;
 

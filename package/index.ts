@@ -2,7 +2,9 @@
 import "./src/auto.js";
 
 export {
-    NeedleFilterTrackingManager as NeedleFaceFilterTrackingManager
+    /** @deprecated Use NeedleTrackingManager */
+    NeedleTrackingManager as NeedleFaceFilterTrackingManager,
+    NeedleTrackingManager as NeedleTrackingManager
 
 } from "./src/FaceFilter.js";
 
