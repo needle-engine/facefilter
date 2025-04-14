@@ -67,7 +67,7 @@ export namespace FacefilterUtils {
         return estimatedWristDepth;
     }
 
-    export function normalizedLandmarkerToWorld(landmark: Vector3Like, camera: PerspectiveCamera, videoWidth: number, videoHeight: number, baseDepth = .3, zScaleFactor = .5) {
+    export function normalizedLandmarkerToCamera(landmark: Vector3Like, camera: PerspectiveCamera, videoWidth: number, videoHeight: number, baseDepth = .3, zScaleFactor = .5) {
 
         const aspect = videoWidth / videoHeight;
 

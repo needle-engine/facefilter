@@ -244,7 +244,7 @@ export class FaceFilterRoot extends Behaviour {
 
 
 export interface IFilterBehaviour {
-    onResultsUpdated(filter: NeedleTrackingManager, index: number): void;
+    onResultsUpdated(manager: NeedleTrackingManager, index: number): void;
 }
 
 /**
