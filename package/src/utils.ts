@@ -55,7 +55,7 @@ export namespace FacefilterUtils {
         const dy = p1y - p2y;
         return Math.sqrt(dx * dx + dy * dy);
     }
-    const REFERENCE_DEPTH = -6; // The Z distance in Three.js units where you measured
+    const REFERENCE_DEPTH = -.3; // The Z distance in Three.js units where you measured
     const REFERENCE_APPARENT_SIZE = .3; // The measured normalized distance (e.g., wrist-to-middleMCP) at REFERENCE_DEPTH
     export function calculateDepth(landmark1: Vector3Like, landmark2: Vector3Like) {
         const currentApparentSize = getNormalizedDistance(landmark1.x, landmark1.y, landmark2.x, landmark2.y);
@@ -428,5 +428,6 @@ export namespace MediapipeHelper {
         }
         return -1;
     }
+
 
 }
