@@ -1,7 +1,7 @@
-import { Application, AssetReference, Behaviour, ClearFlags, GameObject, getIconElement, getParam, getTempVector, Gizmos, instantiate, isDevEnvironment, isMobileDevice, Mathf, ObjectUtils, PromiseAllWithErrors, serializable, setParamWithoutReload, showBalloonMessage, showBalloonWarning } from '@needle-tools/engine';
+import { Application, AssetReference, Behaviour, ClearFlags, GameObject, getIconElement, getParam, getTempVector, Gizmos, instantiate, isDevEnvironment, isMobileDevice, Mathf, ObjectUtils, PromiseAllWithErrors, serializable, setParamWithoutReload, showBalloonMessage, showBalloonWarning, Vec3 } from '@needle-tools/engine';
 import { FaceLandmarker, DrawingUtils, FaceLandmarkerResult, PoseLandmarker, PoseLandmarkerResult, ImageSegmenter, ImageSegmenterResult, Matrix, HandLandmarker, HandLandmarkerResult } from "@mediapipe/tasks-vision";
 import { BlendshapeName, FacefilterUtils, MediapipeHelper } from './utils.js';
-import { MeshBasicMaterial, MeshStandardMaterial, Object3D, PerspectiveCamera, Texture } from 'three';
+import { MeshBasicMaterial, MeshStandardMaterial, Object3D, PerspectiveCamera, Texture, Vector3Like } from 'three';
 import { NeedleRecordingHelper } from './RecordingHelper.js';
 import { FaceFilterRoot, FilterBehaviour } from './Behaviours.js';
 import { mirror } from './settings.js';
@@ -288,11 +288,18 @@ export class NeedleTrackingManager extends Behaviour {
     }
 
     /**
-     * Get an array to the active face objects.  
-     * @returns an array of th active face objects, thise hold a reference to the face instance
+     * Get an array to the face objects.  
+     * @returns an array of face instance objects
      */
-    getActiveFaceObjects() {
-        return Array.from(this._faces)
+    get faces() {
+        return this._faces;
+    }
+
+    /**
+     * Get an array to the hand objects.
+     */
+    get hands() {
+        return this._hands;
     }
 
 
@@ -671,8 +678,8 @@ export class NeedleTrackingManager extends Behaviour {
         for (let i = 0; i < this._faces.length; i++) {
             if (i >= matrices.length) {
                 const state = this._faces[i];
-                if ((this.context.time.realtimeSinceStartup - state.lastUpdateTime) > .5) {
-                    state?.remove();
+                if ((state && this.context.time.realtimeSinceStartup - state.lastUpdateTime) > .5) {
+                    state.remove();
                 }
             }
         }
@@ -732,7 +739,6 @@ export class NeedleTrackingManager extends Behaviour {
             const state = this._faces[i] ?? new FaceInstance(this);
             state.update(active, i, matrices.length);
             this._faces[i] = state;
-
         }
     }
 
@@ -829,7 +835,7 @@ export class NeedleTrackingManager extends Behaviour {
             return;
         }
         const key = evt.key.toLowerCase();
-        if (this._debug && key === "f") {
+        if (debug && key === "f") {
             this.toggleDebug();
         }
         switch (key) {
@@ -954,7 +960,17 @@ function getTaskRunner<T>(runner: null | T | Promise<T>): T | null {
 }
 
 
-export class FaceInstance {
+interface ITrackingInstance {
+    /**  Removes the object from the scene when tracking is lost. Called by the tracking manager */
+    remove(): void;
+    /** @returns true if the object is currently being tracked (e.g. the face or hand) */
+    get isTracked(): boolean;
+    /** @returns the index of the tracked object (e.g. face 0 or hand 0) */
+    get trackingIndex(): number;
+}
+
+
+export class FaceInstance implements ITrackingInstance {
     readonly manager: NeedleTrackingManager;
     get context() { return this.manager.context; }
     get lastUpdateTime() { return this._lastUpdateTime }
@@ -963,6 +979,13 @@ export class FaceInstance {
     get instance() { return this._instance; }
     /** The index of the tracked face */
     get faceIndex() { return this._faceIndex; }
+
+    get isTracked(): boolean {
+        return this._instance !== null && this._instance.parent !== null;
+    }
+    get trackingIndex(): number {
+        return this._faceIndex;
+    }
 
     constructor(manager: NeedleTrackingManager) {
         this.manager = manager;
@@ -1070,79 +1093,74 @@ export class FaceInstance {
 
 
 
-export class HandInstance {
+type HandAttachmentOption = {
+    keypoint: MediapipeHelper.HandKeypointName,
+    offset?: Vector3Like,
+}
+export class HandInstance implements ITrackingInstance {
     readonly manager: NeedleTrackingManager;
     get context() { return this.manager.context; }
     get timeSinceLastUpdate() { return this._lastUpdateTime; }
+
+    get isTracked(): boolean { return this._isTracked; }
+    get trackingIndex(): number { return this._handIndex; }
 
     constructor(manager: NeedleTrackingManager) {
         this.manager = manager;
     }
 
-    private _lastUpdateTime: number = -1;
-    private readonly _behaviours: HandTrackingBehaviour[] = [];
 
-    private _handObjects: Object3D[] = [];
-    private _handModel: Promise<Object3D | null> | Object3D | null = null;
+    private _lastUpdateTime: number = -1;
+    private _isTracked: boolean = false;
+    private _handIndex: number = -1;
+
+    private readonly _behaviours: HandTrackingBehaviour[] = [];
+    private readonly _attachedObjects: Map<Object3D, HandAttachmentOption> = new Map();
+
+    attachToHand(obj: Object3D, keypoint: MediapipeHelper.HandKeypointName, opts: Omit<HandAttachmentOption, "keypoint"> = {}) {
+        const options = (opts as HandAttachmentOption);
+        options.keypoint = keypoint;
+        this._attachedObjects.set(obj, options);
+    }
 
     render(results: HandLandmarkerResult, index: number) {
 
         // https://ai.google.dev/edge/mediapipe/solutions/vision/hand_landmarker/web_js?hl=en#handle_and_display_results
-
         const side = results.handedness[index][0]?.categoryName;
         const isLeft = side === "Left";
 
         const handLm = results.landmarks[index];
         if (!handLm) { return; }
 
+        this._isTracked = true;
+        this._handIndex = index;
+        this._lastUpdateTime = this.context.time.realtimeSinceStartup;
+
         const camera = this.context.mainCamera;
         if (!(camera instanceof PerspectiveCamera)) { return; }
 
-        this._lastUpdateTime = this.context.time.realtimeSinceStartup;
 
+        // TODO: can we use the world landmarks for this?
+        const depth = FacefilterUtils.calculateDepth(
+            handLm[MediapipeHelper.getJointIndex("wrist")],
+            handLm[MediapipeHelper.getJointIndex("middle_finger_mcp")]
+        );
 
-        const wrist = handLm[MediapipeHelper.getJointIndex("wrist")];
-        const middleMCP = handLm[MediapipeHelper.getJointIndex("middle_finger_mcp")];
-        const depth = FacefilterUtils.calculateDepth(wrist, middleMCP);
-
-
-        if (this._handObjects.length === 0) {
-
-            if (!this._handModel) {
-                const url = `https://cdn.jsdelivr.net/npm/@webxr-input-profiles/assets@1.0/dist/profiles/generic-hand/${isLeft ? "left" : "right"}.glb`;
-                this._handModel = AssetReference.getOrCreateFromUrl(url).instantiate().then((model) => {
-                    if (model) {
-                        const beh = model.getOrAddComponent(HandTrackingBehaviour)
-                        console.log("Loaded Hand", model, beh);
-                        this._behaviours.push(beh);
-                        this.context.scene.add(model)
-                        return model;
-                    }
-                    return null;
-                });
-            }
-
-            for (let i = 0; i < handLm.length; i++) {
-                const obj = ObjectUtils.createPrimitive("Sphere", {
-                    scale: .3,
-                    color: (i / handLm.length) * 0xFFFFFF
-                });
-                this._handObjects.push(obj);
-
-            }
-        }
-
-        // debug rendering
-        for (let i = 0; i < handLm.length; i++) {
-            const obj = this._handObjects[i];
-            if (obj) {
-                const segment = handLm[i];
-                const pos = FacefilterUtils.normalizedLandmarkerToCamera(segment, camera, this.manager.videoWidth, this.manager.videoHeight, depth);
+        for (const attached of this._attachedObjects) {
+            const obj = attached[0];
+            const opts = attached[1];
+            const keypoint = handLm[MediapipeHelper.getJointIndex(opts.keypoint)];
+            if (keypoint) {
+                const pos = FacefilterUtils.normalizedLandmarkerToCamera(keypoint, camera, this.manager.videoWidth, this.manager.videoHeight, depth);
                 if (obj.parent != camera) camera.add(obj);
                 obj.position.copy(pos);
-                // obj.position.lerp(pos, this.context.time.deltaTime / .033);
+                if (opts.offset) {
+                    obj.position.add(opts.offset);
+                }
             }
         }
+
+        if (debug) this.renderDebug(results, index, depth);
 
         for (const beh of this._behaviours) {
             if (!beh.activeAndEnabled) continue;
@@ -1151,16 +1169,73 @@ export class HandInstance {
     }
 
     remove() {
-        if (this._handModel) {
-            const model = this._handModel;
+        this._isTracked = false;
+        this.removeDebug();
+        this._behaviours.length = 0;
+        for (const attached of this._attachedObjects) {
+            const obj = attached[0];
+            obj.removeFromParent();
+        }
+    }
+
+
+
+    private readonly _testObjects: Object3D[] = [];
+    private _testModel: Promise<Object3D | null> | Object3D | null = null;
+    private removeDebug() {
+        if (this._testModel) {
+            const model = this._testModel;
             if (!(model instanceof Promise))
                 GameObject.destroy(model);
-            this._handModel = null;
+            this._testModel = null;
         }
-        for (const obj of this._handObjects) {
+        for (const obj of this._testObjects) {
             GameObject.destroy(obj);
         }
-        this._handObjects.length = 0;
-        this._behaviours.length = 0;
+        this._testObjects.length = 0;
+    }
+    private renderDebug(results: HandLandmarkerResult, index: number, depth: number) {
+
+        const camera = this.context.mainCamera as PerspectiveCamera;
+        const handLm = results.landmarks[index];
+
+        const side = results.handedness[index][0]?.categoryName;
+        const isLeft = side === "Left";
+
+        if (this._testObjects.length === 0) {
+            // if (!this._testModel) {
+            //     const url = `https://cdn.jsdelivr.net/npm/@webxr-input-profiles/assets@1.0/dist/profiles/generic-hand/${isLeft ? "left" : "right"}.glb`;
+            //     this._testModel = AssetReference.getOrCreateFromUrl(url).instantiate().then((model) => {
+            //         if (model) {
+            //             const beh = model.getOrAddComponent(HandTrackingBehaviour)
+            //             console.log("Loaded Hand", model, beh);
+            //             this._behaviours.push(beh);
+            //             this.context.scene.add(model)
+            //             return model;
+            //         }
+            //         return null;
+            //     });
+            // }
+
+            for (let i = 0; i < handLm.length; i++) {
+                const obj = ObjectUtils.createPrimitive("Sphere", {
+                    scale: .01,
+                    color: (i / handLm.length) * 0xFFFFFF
+                });
+                this._testObjects.push(obj);
+
+            }
+        }
+
+        // debug rendering
+        for (let i = 0; i < handLm.length; i++) {
+            const obj = this._testObjects[i];
+            if (obj) {
+                const segment = handLm[i];
+                const pos = FacefilterUtils.normalizedLandmarkerToCamera(segment, camera, this.manager.videoWidth, this.manager.videoHeight, depth);
+                if (obj.parent != camera) camera.add(obj);
+                obj.position.copy(pos);
+            }
+        }
     }
 }
