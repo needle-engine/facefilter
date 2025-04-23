@@ -5,8 +5,8 @@ This project contains the sourcecode for the facefilter package as well as an ex
 
 
 <p align="center">
-<img alt="NPM Version" src="https://img.shields.io/npm/v/@needle-tools/facefilter">
-<img alt="NPM Last Update" src="https://img.shields.io/npm/last-update/@needle-tools/facefilter">
+<a href="https://www.npmjs.com/package/@needle-tools/facefilter"><img alt="NPM Version" src="https://img.shields.io/npm/v/@needle-tools/facefilter"></a>
+<a href="https://www.npmjs.com/package/@needle-tools/facefilter"><img alt="NPM Last Update" src="https://img.shields.io/npm/last-update/@needle-tools/facefilter"></a>
 </p>
 
 
