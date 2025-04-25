@@ -429,5 +429,36 @@ export namespace MediapipeHelper {
         return -1;
     }
 
+    /**
+     * Get the index of the previous joint in the hand model. E.g. "thumb_mcp" -> "wrist", "index_finger_tip" -> "index_finger_dip", etc.
+     * @param joint The name of the joint.
+     * @link https://ai.google.dev/edge/mediapipe/solutions/vision/hand_landmarker#models
+     */
+    export function getPreviousJointIndex(joint: HandKeypointName): number {
+        switch (joint) {
+            case "wrist": return -1;
+            case "thumb_cmc": return 0;
+            case "thumb_mcp": return 1;
+            case "thumb_ip": return 2;
+            case "thumb_tip": return 3;
+            case "index_finger_mcp": return 0;
+            case "index_finger_pip": return 5;
+            case "index_finger_dip": return 6;
+            case "index_finger_tip": return 7;
+            case "middle_finger_mcp": return 0;
+            case "middle_finger_pip": return 9;
+            case "middle_finger_dip": return 10;
+            case "middle_finger_tip": return 11;
+            case "ring_finger_mcp": return 0;
+            case "ring_finger_pip": return 13;
+            case "ring_finger_dip": return 14;
+            case "ring_finger_tip": return 15;
+            case "pinky_mcp": return 0;
+            case "pinky_pip": return 17;
+            case "pinky_dip": return 18;
+            case "pinky_tip": return 19;
+        }
+        return -1;
+    }
 
 }

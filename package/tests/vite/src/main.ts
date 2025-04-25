@@ -1,6 +1,7 @@
 import { ObjectUtils, onStart } from "@needle-tools/engine";
 import "@needle-tools/facefilter";
 import { NeedleTrackingManager } from "@needle-tools/facefilter";
+import { MeshNormalMaterial } from "three";
 
 
 onStart((ctx) => {
@@ -8,11 +9,11 @@ onStart((ctx) => {
     const t = NeedleTrackingManager.instance;
     console.log(t);
     if (t) {
-        t.maxFaces = 1;
+        t.maxFaces = 0;
         t.maxHands = 2;
 
         setTimeout(() => {
-            const cube = ObjectUtils.createPrimitive("Cube", { scale: .05 });
+            const cube = ObjectUtils.createPrimitive("Cube", { scale: [.03, .01, .05], material: new MeshNormalMaterial() });
             t.hands[0].attachToHand(cube, "index_finger_tip")
         }, 3000)
 
