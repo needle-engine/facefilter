@@ -1,7 +1,7 @@
-import { Application, AssetReference, Behaviour, ClearFlags, GameObject, getIconElement, getParam, getTempVector, Gizmos, instantiate, isDevEnvironment, isMobileDevice, Mathf, ObjectUtils, PromiseAllWithErrors, serializable, setParamWithoutReload, showBalloonMessage, showBalloonWarning, Vec3 } from '@needle-tools/engine';
+import { Application, AssetReference, Behaviour, ClearFlags, GameObject, getIconElement, getParam, getTempQuaternion, getTempVector, Gizmos, instantiate, isDevEnvironment, isMobileDevice, Mathf, ObjectUtils, PromiseAllWithErrors, serializable, setParamWithoutReload, showBalloonMessage, showBalloonWarning, Vec3 } from '@needle-tools/engine';
 import { FaceLandmarker, DrawingUtils, FaceLandmarkerResult, PoseLandmarker, PoseLandmarkerResult, ImageSegmenter, ImageSegmenterResult, Matrix, HandLandmarker, HandLandmarkerResult } from "@mediapipe/tasks-vision";
 import { BlendshapeName, FacefilterUtils, MediapipeHelper } from './utils.js';
-import { MeshBasicMaterial, MeshStandardMaterial, Object3D, PerspectiveCamera, Texture, Vector3Like } from 'three';
+import { Matrix4, MeshBasicMaterial, MeshStandardMaterial, Object3D, PerspectiveCamera, Texture, Vector3, Vector3Like } from 'three';
 import { NeedleRecordingHelper } from './RecordingHelper.js';
 import { FaceFilterRoot, FilterBehaviour } from './Behaviours.js';
 import { mirror } from './settings.js';
@@ -1091,10 +1091,17 @@ export class FaceInstance implements ITrackingInstance {
     }
 }
 
-
-
+/**
+ * The hand attachment point can either be a joint name or a position between two joints
+ */
+type HandAttachmentPoint = MediapipeHelper.HandKeypointName | {
+    p0: MediapipeHelper.HandKeypointName,
+    p1: MediapipeHelper.HandKeypointName,
+    /** A value between 0 and 1 where 0 means the point is exactly at p0 and 1 means the point is exactly at p1 */
+    t01: number,
+}
 type HandAttachmentOption = {
-    keypoint: MediapipeHelper.HandKeypointName,
+    keypoint: HandAttachmentPoint,
     offset?: Vector3Like,
 }
 export class HandInstance implements ITrackingInstance {
@@ -1117,7 +1124,7 @@ export class HandInstance implements ITrackingInstance {
     private readonly _behaviours: HandTrackingBehaviour[] = [];
     private readonly _attachedObjects: Map<Object3D, HandAttachmentOption> = new Map();
 
-    attachToHand(obj: Object3D, keypoint: MediapipeHelper.HandKeypointName, opts: Omit<HandAttachmentOption, "keypoint"> = {}) {
+    attachToHand(obj: Object3D, keypoint: HandAttachmentPoint, opts: Omit<HandAttachmentOption, "keypoint"> = {}) {
         const options = (opts as HandAttachmentOption);
         options.keypoint = keypoint;
         this._attachedObjects.set(obj, options);
@@ -1149,13 +1156,54 @@ export class HandInstance implements ITrackingInstance {
         for (const attached of this._attachedObjects) {
             const obj = attached[0];
             const opts = attached[1];
+
+            // Ensure the attached object is parented to the camera since all calculations are in camera space
+            if (obj.parent != camera) {
+                camera.add(obj);
+            }
+
+
+            if (!(typeof opts.keypoint === "string")) {
+                throw new Error("Not implemented");
+            }
+
             const keypoint = handLm[MediapipeHelper.getJointIndex(opts.keypoint)];
             if (keypoint) {
+
+
+
                 const pos = FacefilterUtils.normalizedLandmarkerToCamera(keypoint, camera, this.manager.videoWidth, this.manager.videoHeight, depth);
-                if (obj.parent != camera) camera.add(obj);
                 obj.position.copy(pos);
+
+                // Apply the offset if one is configured
                 if (opts.offset) {
                     obj.position.add(opts.offset);
+                }
+
+                // Update rotation
+                const previousJointIndex = MediapipeHelper.getPreviousJointIndex(opts.keypoint);
+                const prev = handLm[previousJointIndex];
+                const prevPosition = FacefilterUtils.normalizedLandmarkerToCamera(prev, camera, this.manager.videoWidth, this.manager.videoHeight, depth);
+
+                const forwardVec = getTempVector(pos).sub(prevPosition);
+                if (forwardVec.length() > 0) {
+
+                    forwardVec.normalize();
+
+                    const wrist = handLm[0];
+                    const wristPos = FacefilterUtils.normalizedLandmarkerToCamera(wrist, camera, this.manager.videoWidth, this.manager.videoHeight, depth);
+                    // const tipPos = FacefilterUtils.normalizedLandmarkerToCamera(handLm[MediapipeHelper.getJointIndex("index_finger_tip")], camera, this.manager.videoWidth, this.manager.videoHeight, depth);
+                    const palmDir = getTempVector(prevPosition).sub(wristPos);
+                    palmDir.normalize();
+
+                    const rightVec = getTempVector(forwardVec).cross(palmDir);
+                    rightVec.normalize()
+
+                    const upVec = getTempVector(forwardVec).cross(rightVec);
+
+                    const rotationMatrix = new Matrix4();
+                    rotationMatrix.makeBasis(rightVec, upVec, forwardVec);
+                    obj.quaternion.slerp(getTempQuaternion().setFromRotationMatrix(rotationMatrix), this.context.time.deltaTime / .1);
                 }
             }
         }
