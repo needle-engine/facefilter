@@ -40,7 +40,7 @@
   "scripts": {
     "dev": "npx nodemon --watch src --ext ts,tsx --exec \"npm run compile\"",
     "prepublishOnly": "npx --yes needle-tools/npm-publish-helper prepare-publish",
-    "compile": "npx --yes needle-tools/npm-publish-helper compile"
+    "compile": "npx --yes needle-tools/npm-publish-helper compile-library"
   },
   "keywords": [
     "needle",

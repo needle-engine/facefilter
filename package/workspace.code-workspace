@@ -1,8 +1,11 @@
 {
   "folders": [
     {
+      "path": "../.github"
+    },
+    {
       "path": "."
-    }
+    },
   ],
   "settings": {
     "window.title": "npm-facefilter",
