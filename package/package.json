@@ -33,6 +33,16 @@
     "esbuild": "^0.25.1",
     "three": "npm:@needle-tools/three@^0.169.5"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/needle-engine/facefilter"
+  },
+  "homepage": "https://needle.tools",
+  "author": {
+    "name": "Needle",
+    "email": "hi@needle.tools",
+    "url": "https://needle.tools/"
+  },
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org/"
