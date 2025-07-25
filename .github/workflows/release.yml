@@ -31,6 +31,6 @@ jobs:
 
       - name: Publish to npm (next and experimental branches)
         if: ${{ !startsWith(github.ref_name, 'release/stable') }}
-        run: npx --yes needle-publish-helper@stable publish "." --webhook "${{ secrets.DISCORD_WEBHOOK }}" --access-token "${{ secrets.NPM_TOKEN }}" --tag "${{ github.ref_name }}" --version+tag --version+hash --create-tag "release/" --llm-api-key "${{ secrets.LLM_API_KEY }}"
+        run: npx --yes needle-publish-helper@next publish "." --webhook "${{ secrets.DISCORD_WEBHOOK }}" --access-token "${{ secrets.NPM_TOKEN }}" --tag "${{ github.ref_name }}" --version+tag --version+hash --create-tag "release/" --llm-api-key "${{ secrets.LLM_API_KEY }}"
 
 

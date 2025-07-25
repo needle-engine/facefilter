@@ -39,8 +39,8 @@
   },
   "scripts": {
     "dev": "npx nodemon --watch src --ext ts,tsx --exec \"npm run compile\"",
-    "prepublishOnly": "npx --yes needle-tools/npm-publish-helper prepare-publish",
-    "compile": "npx --yes needle-tools/npm-publish-helper compile-library"
+    "prepublishOnly": "npx --yes needle-publish-helper prepare-publish",
+    "compile": "npx --yes needle-publish-helper compile-library"
   },
   "keywords": [
     "needle",
