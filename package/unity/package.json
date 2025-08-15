@@ -1,8 +1,8 @@
 {
     "name": "com.needle.face-filter",
-    "version": "1.0.0-beta.11",
+    "version": "1.0.0",
     "displayName": "Needle Engine FaceFilter",
-    "description": "Needle Engine FaceFilter",
+    "description": "Create FaceFilter effects with Needle Engine and Mediapipe",
     "dependencies": {
         "com.unity.cloud.draco": "5.1.8",
         "com.unity.cloud.ktx": "3.4.5",

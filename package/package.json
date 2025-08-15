@@ -1,7 +1,7 @@
 {
   "name": "@needle-tools/facefilter",
-  "version": "1.0.0-beta.12",
-  "description": "Needle Engine FaceFilter",
+  "version": "1.0.0",
+  "description": "Create FaceFilter effects with Needle Engine and Mediapipe",
   "main": "index.ts",
   "exports": {
     ".": {
