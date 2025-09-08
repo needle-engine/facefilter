@@ -5,7 +5,7 @@
     "outDir": "dist",
     "useDefineForClassFields": true,
     "lib": ["ESNext", "DOM"],
-    "moduleResolution": "Node",
+    "moduleResolution": "bundler",
     "strict": true,
     "sourceMap": true,
     "resolveJsonModule": true,
