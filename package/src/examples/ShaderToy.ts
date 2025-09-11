@@ -167,7 +167,7 @@ export class ShaderToyFaceFilter extends FaceMeshBehaviour {
         }
     }
 
-    @syncField(ShaderToyFaceFilter.prototype.onShaderChanged)
+    @syncField(function (this: ShaderToyFaceFilter) { this.onShaderChanged() })
     private _networkedShader: string | null = null;
 
     private onPaste = (e: ClipboardEvent) => {
