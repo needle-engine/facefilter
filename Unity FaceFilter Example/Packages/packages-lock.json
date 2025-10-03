@@ -1,11 +1,11 @@
 {
   "dependencies": {
     "com.needle.engine-exporter": {
-      "version": "4.4.0-alpha.5",
+      "version": "4.10.2",
       "depth": 0,
       "source": "registry",
       "dependencies": {
-        "org.khronos.unitygltf": "2.14.1",
+        "org.khronos.unitygltf": "2.17.11",
         "com.unity.modules.animation": "1.0.0",
         "com.unity.modules.unitywebrequest": "1.0.0",
         "com.unity.modules.uielements": "1.0.0",
@@ -14,7 +14,10 @@
         "com.unity.timeline": "1.5.7",
         "com.unity.test-framework": "1.1.31",
         "com.unity.nuget.newtonsoft-json": "3.0.1",
-        "com.unity.sharp-zip-lib": "1.3.2-preview"
+        "com.unity.sharp-zip-lib": "1.3.2-preview",
+        "com.unity.cloud.draco": "5.1.2",
+        "com.unity.cloud.ktx": "3.3.0",
+        "com.unity.meshopt.decompress": "0.1.0-preview.7"
       },
       "url": "https://packages.needle.tools"
     },
@@ -184,7 +187,7 @@
       }
     },
     "org.khronos.unitygltf": {
-      "version": "2.14.1",
+      "version": "2.17.11",
       "depth": 1,
       "source": "registry",
       "dependencies": {
