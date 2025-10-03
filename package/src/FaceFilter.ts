@@ -1,4 +1,4 @@
-import { AssetReference, Behaviour, ClearFlags, GameObject, getIconElement, getParam, instantiate, isDevEnvironment, isMobileDevice, ObjectUtils, PromiseAllWithErrors, serializable, setParamWithoutReload, showBalloonMessage } from '@needle-tools/engine';
+import { AssetReference, Behaviour, ClearFlags, delay, GameObject, getIconElement, getParam, instantiate, isDevEnvironment, isMobileDevice, ObjectUtils, PromiseAllWithErrors, serializable, setParamWithoutReload, showBalloonMessage } from '@needle-tools/engine';
 import { FaceLandmarker, DrawingUtils, FaceLandmarkerResult, PoseLandmarker, PoseLandmarkerResult, ImageSegmenter, ImageSegmenterResult, Matrix } from "@mediapipe/tasks-vision";
 import { BlendshapeName, FacefilterUtils, MediapipeHelper } from './utils.js';
 import { Object3D, Texture } from 'three';
@@ -342,7 +342,7 @@ export class NeedleFilterTrackingManager extends Behaviour {
         console.debug("Detectors loaded!");
 
         // create and start the video playback
-        if(!this._video) {
+        if (!this._video) {
             // If no video element was assigned by the user
             this._video = document.createElement("video");
             this._video.style.display = "none";
@@ -408,14 +408,21 @@ export class NeedleFilterTrackingManager extends Behaviour {
         this._imageSegmentation?.close();
     }
 
-    private async startCamera(video: HTMLVideoElement) {
+    private async startCamera(video: HTMLVideoElement, retryCount: number = 0) {
         // Use camera stream
         const constraints = { video: true, audio: false };
+        console.debug("Requesting camera access...");
         const stream = await navigator.mediaDevices.getUserMedia(constraints).catch((e) => {
-            showBalloonMessage("Could not start camera: " + e.message);
-            console.warn("Could not start camera");
+            console.warn("Could not start camera", e);
             return null;
         });
+        if (stream === null && retryCount <= 2) {
+            await delay(200 + 500 * retryCount);
+            return this.startCamera(video, retryCount + 1);
+        }
+        else if (stream === null) {
+            showBalloonMessage("Could not start camera (see console)");
+        }
         video.srcObject = stream;
         video.muted = true;
         const onReady = () => {
@@ -438,7 +445,7 @@ export class NeedleFilterTrackingManager extends Behaviour {
                 let currentIndex: number = getParam("testvideo") as number;
                 if (typeof currentIndex != "number") currentIndex = -1;
                 this.context.menu.appendChild({
-                    label: "Switch Video (Dev)",
+                    label: "Use Test Video",
                     title: "Switch between test videos - this button is only visible in development mode (when you run your website in a local server)",
                     icon: "videocam",
                     onClick: () => {
