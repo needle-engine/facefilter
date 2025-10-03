@@ -50,7 +50,7 @@
   },
   "scripts": {
     "dev": "npx nodemon --watch src --ext ts,tsx --exec \"npm run compile\"",
-    "prepublishOnly": "npx --yes needle-publish-helper prepare-publish",
+		"prepublishOnly": "npx --yes needle-publish-helper@next prepare-publish --verbose",
     "compile": "npx --yes needle-publish-helper compile-library"
   },
   "keywords": [
