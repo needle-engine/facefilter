@@ -78,8 +78,21 @@ export class NeedleFilterTrackingManager extends Behaviour {
     @serializable()
     createMenuButton: boolean = true;
 
+    /** When enabled a button for starting the recording will be created 
+     * @default true
+    */
+    @serializable()
+    createRecordingButton: boolean = true;
+
+    /** When enabled a share button will be created 
+     * @default true
+    */
+    @serializable()
+    createShareButton: boolean = true;
+
     /** Assign a texture to display your logo in the recorded video.   
      * Note: this requires an active PRO license: https://needle.tools/pricing
+     * @default null
      */
     // @nonSerialized
     @serializable(Texture)
@@ -431,8 +444,9 @@ export class NeedleFilterTrackingManager extends Behaviour {
             return this.startCamera(video, retryCount + 1);
         }
         else if (stream === null) {
-            showBalloonMessage("Could not start camera (see console)");
+            if (debug || isDevEnvironment()) showBalloonMessage("Could not start camera (see console)");
         }
+        console.debug("Camera access granted");
         video.srcObject = stream;
         video.muted = true;
         const onReady = () => {
@@ -657,54 +671,57 @@ export class NeedleFilterTrackingManager extends Behaviour {
     private _buttons: HTMLElement[] = [];
 
     private createUI() {
-        if (!this.createMenuButton) return;
-        // Create menu Buttons
-        const recordingButton = NeedleRecordingHelper.createButton({
-            context: this.context,
-            customLogo: this.customLogo,
-            download_name: this.downloadName || undefined,
-        });
-        this._buttons.push(recordingButton);
+        if (!this.createMenuButton && !this.createRecordingButton && !this.createShareButton) return;
 
-        if (this.filters.length > 1) {
-            const nextFilterButton = this.context.menu.appendChild({
-                label: "Next Filter",
-                icon: "comedy_mask",
-                onClick: () => {
-                    this.selectNextFilter();
-                }
-            });
-            this._buttons.push(nextFilterButton);
+
+        if (this.createRecordingButton) {
+            this._buttons.push(NeedleRecordingHelper.createButton({
+                context: this.context,
+                customLogo: this.customLogo,
+                download_name: this.downloadName || undefined,
+            }));
         }
 
-
-        const shareButton = this.context.menu.appendChild({
-            label: "Share",
-            icon: "share",
-            onClick: function () {
-                if (isMobileDevice() && navigator.share) {
-                    navigator.share({
-                        title: "Needle Filter",
-                        text: "Check this out",
-                        url: window.location.href,
-                    }).catch(e => {
-                        // ignore cancel
-                        console.warn(e);
-                    });
-                }
-                else {
-                    navigator.clipboard.writeText(window.location.href);
-                    const element = this as HTMLElement;
-                    element.innerText = "Copied";
-                    element.prepend(getIconElement("done"));
-                    setTimeout(() => {
-                        element.innerText = "Share";
-                        element.prepend(getIconElement("share"));
-                    }, 2000)
-                }
+        if (this.createMenuButton) {
+            if (this.filters.length > 1) {
+                this._buttons.push(this.context.menu.appendChild({
+                    label: "Next Filter",
+                    icon: "comedy_mask",
+                    onClick: () => {
+                        this.selectNextFilter();
+                    }
+                }));
             }
-        });
-        this._buttons.push(shareButton);
+        }
+
+        if (this.createShareButton) {
+            this._buttons.push(this.context.menu.appendChild({
+                label: "Share",
+                icon: "share",
+                onClick: function () {
+                    if (isMobileDevice() && navigator.share) {
+                        navigator.share({
+                            title: "Needle Filter",
+                            text: "Check this out",
+                            url: window.location.href,
+                        }).catch(e => {
+                            // ignore cancel
+                            console.warn(e);
+                        });
+                    }
+                    else {
+                        navigator.clipboard.writeText(window.location.href);
+                        const element = this as HTMLElement;
+                        element.innerText = "Copied";
+                        element.prepend(getIconElement("done"));
+                        setTimeout(() => {
+                            element.innerText = "Share";
+                            element.prepend(getIconElement("share"));
+                        }, 2000)
+                    }
+                }
+            }));
+        }
     }
 
 
