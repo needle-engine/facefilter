@@ -2,6 +2,8 @@
 import "./src/auto.js";
 
 export {
+    /** Same as NeedleFilterTrackingManager (use this for codegen) */
+    NeedleFilterTrackingManager,
     NeedleFilterTrackingManager as NeedleFaceFilterTrackingManager
 
 } from "./src/FaceFilter.js";

@@ -278,7 +278,17 @@ export class NeedleFilterTrackingManager extends Behaviour {
 
     /**
      * Get an array to the active face objects.  
-     * @returns an array of th active face objects, thise hold a reference to the face instance
+     * @returns an array of the active face objects, these hold a reference to the face instance
+     * @example
+     * ```ts
+     * const faces = manager.getActiveFaceObjects();
+     * for(const face of faces) {
+     *   // access the face index
+     *   console.log(face.faceIndex);
+     *   // access the 3D object
+     *   console.log(face.instance);
+     * }
+     * ```
      */
     getActiveFaceObjects() {
         return Array.from(this._states)
@@ -540,18 +550,8 @@ export class NeedleFilterTrackingManager extends Behaviour {
         }
 
         this.onResultsUpdated();
-    }
 
-    /** @internal */
-    onBeforeRender(): void {
-
-        // Currently we need to force the FOV
-        if (this.context.mainCameraComponent) {
-            this.context.mainCameraComponent.fieldOfView = 63;
-            this.context.mainCameraComponent.clearFlags = ClearFlags.None;
-            this._videoRenderer?.onUpdate();
-        }
-
+        //
         const faceResults = this._lastFaceLandmarkResults;
         if (faceResults) {
             this.updateDebug(faceResults);
@@ -561,6 +561,15 @@ export class NeedleFilterTrackingManager extends Behaviour {
                 const matrix = faceResults.facialTransformationMatrixes[i];
                 state?.render(matrix);
             }
+        }
+    }
+
+    onBeforeRender(): void {
+        // Currently we need to force the FOV
+        if (this.context.mainCameraComponent) {
+            this.context.mainCameraComponent.fieldOfView = 63;
+            this.context.mainCameraComponent.clearFlags = ClearFlags.None;
+            this._videoRenderer?.onUpdate();
         }
     }
 
