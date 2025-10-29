@@ -9,8 +9,8 @@
   },
   "dependencies": {
 	  "@needle-tools/engine": "^4.4.0-alpha.5",
-	  "three": "npm:@needle-tools/three@^0.169.5"
-	  "@needle-tools/facefilter": "latest",
+	  "three": "npm:@needle-tools/three@^0.169.5",
+	  "@needle-tools/facefilter": "latest"
 	},
   "devDependencies": {
     "@needle-tools/helper": "1.11.3",
