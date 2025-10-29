@@ -10,9 +10,8 @@ export {
 
 
 export {
-    IFilterBehaviour as IFaceFilterBehaviour,
-    FilterBehaviour as FaceFilterBehaviour,
     FaceFilterRoot,
+    FilterBehaviour as FaceFilterBehaviour,
     FaceFilterAnimator,
     FaceFilterBlendshapes,
     FaceFilterEyeBehaviour,
