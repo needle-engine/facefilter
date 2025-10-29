@@ -7,3 +7,4 @@ node_modules
 **/*.csproj
 **/*.sln
 .idea
+.DS_Store

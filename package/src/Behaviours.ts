@@ -47,6 +47,20 @@ export class FaceFilterRoot extends Behaviour {
     @serializable()
     overrideDefaultOccluder: boolean = false;
 
+    /**
+     * The filter manager this avatar is associated with
+     */
+    get manager(): NeedleFilterTrackingManager | null {
+        return this._filter || null;
+    }
+
+    /**
+     * The index of the face this avatar is associated with
+     */
+    get faceIndex(): number {
+        return this._index;
+    }
+
     private _type: AvatarType = "Unknown";
     private _headMatrix: Matrix4 | null = null;
     private _initialScale!: Vector3;
@@ -199,13 +213,14 @@ export class FaceFilterRoot extends Behaviour {
 
     onResultsUpdated(filter: NeedleFilterTrackingManager, index: number) {
         this._index = index;
-        if (!this._filter) {
-            this._filter = filter;
+        if (!this._filter || this._filter !== filter) {
             console.debug("Avatar behaviour initialized");
+            this._filter = filter;
             this.gameObject.getOrAddComponent(FaceFilterBlendshapes);
             this.gameObject.getOrAddComponent(FaceFilterAnimator);
             this._behaviours = this.gameObject.getComponentsInChildren(FilterBehaviour);
         }
+
         for (const beh of this._behaviours) {
             beh.onResultsUpdated(filter, index);
         }
@@ -232,7 +247,34 @@ export interface IFilterBehaviour {
     onResultsUpdated(filter: NeedleFilterTrackingManager, index: number): void;
 }
 
+/**
+ * Base class for all face filter behaviours. This class will be called automatically by the FaceFilter manager.
+ * 
+ * Existing implementations:
+ * - {@link FaceFilterBlendshapes}
+ * - {@link FaceFilterAnimator}
+ * - {@link FaceFilterEyeBehaviour}
+ */
 export abstract class FilterBehaviour extends Behaviour implements IFilterBehaviour {
+    /**
+     * Called when the filter has new results (usually every frame).
+     * @param _filter The filter that produced the results
+     * @param index The index of the face (in case of multiple faces)
+     * 
+     * @example access blendshape values
+     * ```typescript
+     * onResultsUpdated(filter: NeedleFilterTrackingManager, index: number): void {
+     *     const face = filter.facelandmarkerResult?.faceBlendshapes?.[index];
+     *     if(face) {
+     *         for(const shape of face.categories) {
+     *            const name = shape.categoryName;
+     *             const value = shape.score;
+     *            console.log(`Blendshape ${name}: ${value}`);
+     *        }
+     *    }
+     * }
+     * ```
+     */
     abstract onResultsUpdated(_filter: NeedleFilterTrackingManager, index: number): void;
 }
 

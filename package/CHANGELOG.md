@@ -4,6 +4,10 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.0.4] - 2025-10-29
+- Add: Expose base `FaceFilterBehaviour` for implementing custom filter behaviours.
+- Add: The `FaceFilterRoot` class that is automatically added to every filter instance now exposed access to the filter manager and face index. This provides an alternative way to access face data for components that don't derive from FaceFilterBehaviour.
+
 ## [1.0.3] - 2025-10-03
 - Fix: Retry camera access if it fails the first time (some browsers need a moment to enable camera access)
 - Unity: `ShowVideo` option is now exposed to Unity Editor as a toggle to show/hide the video feed
