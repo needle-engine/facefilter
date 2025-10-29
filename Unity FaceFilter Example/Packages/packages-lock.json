@@ -22,7 +22,7 @@
       "url": "https://packages.needle.tools"
     },
     "com.needle.face-filter": {
-      "version": "file:com.needle.face-filter-1.0.2.tgz",
+      "version": "file:com.needle.face-filter-1.0.4.tgz",
       "depth": 0,
       "source": "local-tarball",
       "dependencies": {
