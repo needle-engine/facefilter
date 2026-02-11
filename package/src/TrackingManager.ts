@@ -1,7 +1,7 @@
-import { Application, AssetReference, Behaviour, ClearFlags, GameObject, getIconElement, getParam, getTempQuaternion, getTempVector, Gizmos, instantiate, isDevEnvironment, isMobileDevice, Mathf, ObjectUtils, PromiseAllWithErrors, serializable, setParamWithoutReload, showBalloonMessage, showBalloonWarning, Vec3 } from '@needle-tools/engine';
+import { Application, AssetReference, Behaviour, ClearFlags, GameObject, getIconElement, getParam, getTempVector, Gizmos, instantiate, isDevEnvironment, isMobileDevice, Mathf, ObjectUtils, PromiseAllWithErrors, serializable, setParamWithoutReload, showBalloonMessage, showBalloonWarning, Vec3 } from '@needle-tools/engine';
 import { FaceLandmarker, DrawingUtils, FaceLandmarkerResult, PoseLandmarker, PoseLandmarkerResult, ImageSegmenter, ImageSegmenterResult, Matrix, HandLandmarker, HandLandmarkerResult } from "@mediapipe/tasks-vision";
 import { BlendshapeName, FacefilterUtils, MediapipeHelper } from './utils.js';
-import { Matrix4, MeshBasicMaterial, MeshStandardMaterial, Object3D, PerspectiveCamera, Texture, Vector3, Vector3Like } from 'three';
+import { Matrix4, MeshBasicMaterial, MeshStandardMaterial, Object3D, PerspectiveCamera, Quaternion, Texture, Vector3, Vector3Like } from 'three';
 import { NeedleRecordingHelper } from './RecordingHelper.js';
 import { FaceFilterRoot, FilterBehaviour } from './Behaviours.js';
 import { mirror } from './settings.js';
@@ -1125,6 +1125,21 @@ type HandAttachmentOption = {
     keypoint: HandAttachmentPoint,
     offset?: Vector3Like,
 }
+
+// Cached math objects for hand attachment calculations (avoid per-frame allocations & temp vector aliasing)
+const _attachCurrentPos = new Vector3();
+const _attachPrevPos = new Vector3();
+const _attachWristPos = new Vector3();
+const _attachIndexMcpPos = new Vector3();
+const _attachPinkyMcpPos = new Vector3();
+const _attachForward = new Vector3();
+const _attachPalmNormal = new Vector3();
+const _attachRight = new Vector3();
+const _attachUp = new Vector3();
+const _attachFallbackUp = new Vector3(0, 1, 0);
+const _attachRotMat = new Matrix4();
+const _attachTargetQuat = new Quaternion();
+
 export class HandInstance implements ITrackingInstance {
     readonly manager: NeedleTrackingManager;
     get context() { return this.manager.context; }
@@ -1183,50 +1198,66 @@ export class HandInstance implements ITrackingInstance {
                 camera.add(obj);
             }
 
-
-            if (!(typeof opts.keypoint === "string")) {
+            if (typeof opts.keypoint !== "string") {
                 throw new Error("Not implemented");
             }
 
-            const keypoint = handLm[MediapipeHelper.getJointIndex(opts.keypoint)];
-            if (keypoint) {
+            const keypointLm = handLm[MediapipeHelper.getJointIndex(opts.keypoint)];
+            if (!keypointLm) continue;
 
+            const vw = this.manager.videoWidth;
+            const vh = this.manager.videoHeight;
 
+            // Copy into persistent vectors immediately to avoid temp vector pool aliasing
+            _attachCurrentPos.copy(FacefilterUtils.normalizedLandmarkerToCamera(keypointLm, camera, vw, vh, depth));
+            obj.position.copy(_attachCurrentPos);
 
-                const pos = FacefilterUtils.normalizedLandmarkerToCamera(keypoint, camera, this.manager.videoWidth, this.manager.videoHeight, depth);
-                obj.position.copy(pos);
-
-                // Apply the offset if one is configured
-                if (opts.offset) {
-                    obj.position.add(opts.offset);
-                }
-
-                // Update rotation
-                const previousJointIndex = MediapipeHelper.getPreviousJointIndex(opts.keypoint);
-                const prev = handLm[previousJointIndex];
-                const prevPosition = FacefilterUtils.normalizedLandmarkerToCamera(prev, camera, this.manager.videoWidth, this.manager.videoHeight, depth);
-
-                const forwardVec = getTempVector(pos).sub(prevPosition);
-                if (forwardVec.length() > 0) {
-
-                    forwardVec.normalize();
-
-                    const wrist = handLm[0];
-                    const wristPos = FacefilterUtils.normalizedLandmarkerToCamera(wrist, camera, this.manager.videoWidth, this.manager.videoHeight, depth);
-                    // const tipPos = FacefilterUtils.normalizedLandmarkerToCamera(handLm[MediapipeHelper.getJointIndex("index_finger_tip")], camera, this.manager.videoWidth, this.manager.videoHeight, depth);
-                    const palmDir = getTempVector(prevPosition).sub(wristPos);
-                    palmDir.normalize();
-
-                    const rightVec = getTempVector(forwardVec).cross(palmDir);
-                    rightVec.normalize()
-
-                    const upVec = getTempVector(forwardVec).cross(rightVec);
-
-                    const rotationMatrix = new Matrix4();
-                    rotationMatrix.makeBasis(rightVec, upVec, forwardVec);
-                    obj.quaternion.slerp(getTempQuaternion().setFromRotationMatrix(rotationMatrix), this.context.time.deltaTime / .1);
-                }
+            if (opts.offset) {
+                obj.position.add(opts.offset);
             }
+
+            // Calculate rotation from bone direction
+            const previousJointIndex = MediapipeHelper.getPreviousJointIndex(opts.keypoint);
+            if (previousJointIndex < 0) continue; // wrist has no parent joint to derive direction from
+
+            const prevLm = handLm[previousJointIndex];
+            if (!prevLm) continue;
+
+            _attachPrevPos.copy(FacefilterUtils.normalizedLandmarkerToCamera(prevLm, camera, vw, vh, depth));
+            _attachForward.subVectors(_attachCurrentPos, _attachPrevPos);
+            if (_attachForward.lengthSq() < 0.00001) continue;
+            _attachForward.normalize();
+
+            // Compute palm normal from wrist, index_mcp, pinky_mcp for a robust reference axis
+            // (using a coplanar palm direction caused degeneracy when fingers aligned with wrist direction)
+            const wristLm = handLm[0];
+            const indexMcpLm = handLm[5];  // index_finger_mcp
+            const pinkyMcpLm = handLm[17]; // pinky_mcp
+            _attachWristPos.copy(FacefilterUtils.normalizedLandmarkerToCamera(wristLm, camera, vw, vh, depth));
+            _attachIndexMcpPos.copy(FacefilterUtils.normalizedLandmarkerToCamera(indexMcpLm, camera, vw, vh, depth));
+            _attachPinkyMcpPos.copy(FacefilterUtils.normalizedLandmarkerToCamera(pinkyMcpLm, camera, vw, vh, depth));
+
+            // Palm normal = (pinky_mcp - wrist) × (index_mcp - wrist)
+            _attachPinkyMcpPos.sub(_attachWristPos);
+            _attachIndexMcpPos.sub(_attachWristPos);
+            _attachPalmNormal.crossVectors(_attachPinkyMcpPos, _attachIndexMcpPos);
+            if (_attachPalmNormal.lengthSq() < 0.00001) continue;
+            _attachPalmNormal.normalize();
+
+            // Build orthonormal basis: right = forward × palmNormal, up = forward × right
+            _attachRight.crossVectors(_attachForward, _attachPalmNormal);
+            if (_attachRight.lengthSq() < 0.0001) {
+                // Fallback if forward ≈ palmNormal
+                _attachRight.crossVectors(_attachForward, _attachFallbackUp);
+            }
+            _attachRight.normalize();
+            _attachUp.crossVectors(_attachForward, _attachRight);
+
+            _attachRotMat.makeBasis(_attachRight, _attachUp, _attachForward);
+            _attachTargetQuat.setFromRotationMatrix(_attachRotMat);
+
+            const t = Math.min(1, this.context.time.deltaTime / .1);
+            obj.quaternion.slerp(_attachTargetQuat, t);
         }
 
         if (debug) this.renderDebug(results, index, depth);
