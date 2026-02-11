@@ -448,22 +448,16 @@ export class NeedleTrackingManager extends Behaviour {
         const constraints = { video: true, audio: false };
         console.debug("Requesting camera access...");
         const stream = await navigator.mediaDevices.getUserMedia(constraints).catch((e) => {
-            if (tries <= 2) {
-                setTimeout(() => {
-                    if (this.activeAndEnabled) this.startCamera(video, tries + 1);
-                }, 300);
-                return null;
-            }
-            if (isDevEnvironment()) showBalloonWarning(`Could not start camera: ${e.message}. Perhaps you need to allow camera access?`);
             console.error("[Needle Tracking] Could not start camera: " + e.message);
             return null;
         });
-        if (stream === null && retryCount <= 2) {
-            await delay(200 + 500 * retryCount);
-            return this.startCamera(video, retryCount + 1);
-        }
-        else if (stream === null) {
-            if (debug || isDevEnvironment()) showBalloonMessage("Could not start camera (see console)");
+        if (stream === null) {
+            if (tries < 2) {
+                await new Promise(r => setTimeout(r, 200 + 500 * tries));
+                return this.startCamera(video, tries + 1);
+            }
+            if (isDevEnvironment()) showBalloonWarning("Could not start camera. Perhaps you need to allow camera access?");
+            return;
         }
         console.debug("Camera access granted");
         video.srcObject = stream;
@@ -687,15 +681,6 @@ export class NeedleTrackingManager extends Behaviour {
         }
     }
 
-    onBeforeRender(): void {
-        // Currently we need to force the FOV
-        if (this.context.mainCameraComponent) {
-            this.context.mainCameraComponent.fieldOfView = 63;
-            this.context.mainCameraComponent.clearFlags = ClearFlags.None;
-            this._videoRenderer?.onUpdate();
-        }
-    }
-
     private _blendshapeMirrorIndexMap: Map<number, number> | null = null;
 
     /**
@@ -793,17 +778,13 @@ export class NeedleTrackingManager extends Behaviour {
             return;
         }
 
-        if (this._hands.length > handResults.handedness?.length) {
-            for (let i = this._hands.length - 1; i >= 0; i--) {
-                const hand = this._hands[i];
-                if (i >= handResults.handedness.length) {
-                    hand.remove();
-                }
-            }
+        // Remove excess hand instances
+        while (this._hands.length > handResults.handedness.length) {
+            this._hands.pop()!.remove();
         }
-        else if (this._hands.length < handResults.handedness?.length) {
-            const hand = new HandInstance(this);
-            this._hands.push(hand);
+        // Create missing hand instances
+        while (this._hands.length < handResults.handedness.length) {
+            this._hands.push(new HandInstance(this));
         }
     }
 
@@ -1327,3 +1308,5 @@ export class HandInstance implements ITrackingInstance {
         }
     }
 }
+
+export { NeedleTrackingManager as NeedleFilterTrackingManager };

@@ -5,7 +5,7 @@ export {
     /** Same as NeedleFilterTrackingManager (use this for codegen) */
     NeedleFilterTrackingManager,
     NeedleFilterTrackingManager as NeedleFaceFilterTrackingManager,
-
+    NeedleTrackingManager,
 } from "./src/TrackingManager.js";
 
 
@@ -35,6 +35,13 @@ export {
     FacefilterUtils as NeedleFaceFilterUtils
 } from './src/utils.js';
 
+
+export {
+    HandTrackingBehaviour,
+    HandTrackingSkinnedMeshRenderer,
+} from "./src/hands/HandTrackingBehaviour.js";
+
+export { HandInstance } from "./src/TrackingManager.js";
 
 export {
     ShaderToyFaceFilter,
