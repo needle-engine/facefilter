@@ -124,7 +124,7 @@ onStart(async ctx => {
                                         if (newValue && isImage(newValue)) {
                                             filter.updateTexture(newValue);
 
-                                            for (const obj of manager.getFaceObjects()) {
+                                            for (const obj of manager.faces) {
                                                 const faceMesh = obj.instance?.getComponentInChildren(FaceMeshTexture);
                                                 faceMesh?.updateTexture(newValue);
                                             }

@@ -50,7 +50,7 @@ export class FaceFilterRoot extends Behaviour {
     /**
      * The filter manager this avatar is associated with
      */
-    get manager(): NeedleFilterTrackingManager | null {
+    get manager(): NeedleTrackingManager | null {
         return this._filter || null;
     }
 
@@ -275,7 +275,7 @@ export abstract class FilterBehaviour extends Behaviour implements IFilterBehavi
      * }
      * ```
      */
-    abstract onResultsUpdated(_filter: NeedleFilterTrackingManager, index: number): void;
+    abstract onResultsUpdated(_filter: NeedleTrackingManager, index: number): void;
 }
 
 /**

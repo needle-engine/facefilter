@@ -1,6 +1,6 @@
 import { HandLandmarkerResult } from "@mediapipe/tasks-vision";
-import { Behaviour, Gizmos, IComponent } from "@needle-tools/engine";
-import { PerspectiveCamera, SkinnedMesh } from "three";
+import { Behaviour, IComponent } from "@needle-tools/engine";
+import { Bone, Matrix4, PerspectiveCamera, SkinnedMesh, Vector3 } from "three";
 import type { HandInstance } from "../TrackingManager.js";
 import { FacefilterUtils } from "../utils.js";
 
@@ -32,19 +32,24 @@ export class HandTrackingBehaviour extends Behaviour {
 
 }
 
+type BoneMapping = { bone: Bone, jointIndex: number };
+const _parentInverse = new Matrix4();
+const _localPos = new Vector3();
+
 export class HandTrackingSkinnedMeshRenderer extends Behaviour implements IHandTrackingBehaviour {
 
-
     private _skinnedMesh: SkinnedMesh | null = null;
-    private get skinnedMesh() { return this._skinnedMesh as any as SkinnedMesh; }
+    private _sortedBones: BoneMapping[] = [];
 
     awake() {
+        this._skinnedMesh = null;
         this.gameObject.traverse(o => {
             if (this._skinnedMesh) return; // already found it
             if (o.type === "SkinnedMesh") {
                 this._skinnedMesh = o as SkinnedMesh;
             }
         });
+        this._buildSortedBoneList();
     }
 
     onEnable(): void {
@@ -55,27 +60,51 @@ export class HandTrackingSkinnedMeshRenderer extends Behaviour implements IHandT
         }
     }
 
-    onUpdateHandTracking(hand: HandInstance, res: HandLandmarkerResult, index: number, baseDepth: number): void {
+    /** Build bone list sorted by hierarchy depth (root first) for correct parent-to-child processing */
+    private _buildSortedBoneList() {
+        this._sortedBones = [];
+        if (!this._skinnedMesh) return;
+
+        const entries: (BoneMapping & { depth: number })[] = [];
+        for (const bone of this._skinnedMesh.skeleton.bones) {
+            const boneName = bone.userData?.name || bone.name;
+            const jointIndex = XRHAND_BONE_NAME_TO_MEDIAPIPE_INDEX[boneName];
+            if (jointIndex === undefined || jointIndex === -1) continue;
+            let depth = 0;
+            let p = bone.parent;
+            while (p) { depth++; p = p.parent; }
+            entries.push({ bone, jointIndex, depth });
+        }
+        entries.sort((a, b) => a.depth - b.depth);
+        this._sortedBones = entries;
+    }
+
+    onUpdateHandTracking(hand: HandInstance, res: HandLandmarkerResult, handIndex: number, baseDepth: number): void {
         const camera = this.context.mainCamera;
-        if ((camera instanceof PerspectiveCamera)) {
-            const skinnedMesh = this.skinnedMesh;
-            const handLm = res.landmarks[index];
-            const manager = hand.manager;
-            for (const bone of skinnedMesh.skeleton.bones) {
-                if(!bone.visible) {
-                    continue;
-                }
-                const boneName = bone.userData?.name || bone.name;
-                const index = XRHAND_BONE_NAME_TO_MEDIAPIPE_INDEX[boneName];
-                if (index === -1) {
-                    continue; // Skip if no mapping found
-                }
-                const landmark = handLm[index];
-                const pos = FacefilterUtils.normalizedLandmarkerToCamera(landmark, camera, manager.videoWidth, manager.videoHeight, baseDepth);
-                // TODO: skinning doesnt look correct yet
-                bone.position.set(pos.x, pos.y, pos.z);
-                // const wp = pos.add(this.context.mainCamera.worldPosition);
-                // bone.worldPosition = wp;
+        if (!(camera instanceof PerspectiveCamera)) return;
+
+        const handLm = res.landmarks[handIndex];
+        const manager = hand.manager;
+
+        // Process bones from root to leaf so parent transforms are up-to-date
+        for (const { bone, jointIndex } of this._sortedBones) {
+            if (!bone.visible) continue;
+
+            const landmark = handLm[jointIndex];
+            if (!landmark) continue;
+
+            const cameraPos = FacefilterUtils.normalizedLandmarkerToCamera(
+                landmark, camera, manager.videoWidth, manager.videoHeight, baseDepth
+            );
+
+            // Convert camera-space position to bone's parent local space
+            if (bone.parent) {
+                bone.parent.updateWorldMatrix(true, false);
+                _parentInverse.copy(bone.parent.matrixWorld).invert();
+                _localPos.copy(cameraPos).applyMatrix4(_parentInverse);
+                bone.position.copy(_localPos);
+            } else {
+                bone.position.copy(cameraPos);
             }
         }
     }
