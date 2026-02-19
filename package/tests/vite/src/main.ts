@@ -7,7 +7,7 @@ import { MeshNormalMaterial } from "three";
 onStart((ctx) => {
     ctx.menu.showQRCodeButton(true);
     const t = NeedleTrackingManager.instance;
-    console.log(t);
+    console.log("TEST", t);
     if (t) {
         t.maxFaces = 0;
         t.maxHands = 2;

@@ -182,7 +182,7 @@ namespace Needle.Facefilter.Scripts
 			go.SafeDestroy();
 			if (asset)
 			{
-				var component = (NeedleFilterTrackingManager)comp;
+				var component = (NeedleTrackingManager)comp;
 				var list = component.filters.Where((f => f)).ToList();
 				var isFirstAsset = list.Count == 0;
 				list.Add(asset.transform);
