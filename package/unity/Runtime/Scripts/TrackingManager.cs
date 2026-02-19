@@ -6,7 +6,7 @@ using UnityEngine;
 namespace Needle.Typescript.GeneratedComponents
 {
 	[AddComponentMenu("Needle Engine/Face Filter/Face Filter Tracking Manager")]
-	public partial class NeedleFilterTrackingManager
+	public partial class NeedleTrackingManager
 	{
 		[RequireLicense(LicenseType.Pro, "This logo/image will be displayed during recording using the \"Record\" button.", "Custom Branding requires a Needle Engine PRO license")]
 		public Texture2D customLogo;
@@ -14,12 +14,12 @@ namespace Needle.Typescript.GeneratedComponents
 		public string downloadName;
 		
 #if UNITY_EDITOR
-		[UnityEditor.CustomEditor(typeof(NeedleFilterTrackingManager))]
+		[UnityEditor.CustomEditor(typeof(NeedleTrackingManager))]
 		private class Editor : UnityEditor.Editor
 		{
 			public override void OnInspectorGUI()
 			{
-				var self = (NeedleFilterTrackingManager) this.target;
+				var self = (NeedleTrackingManager) this.target;
 				UnityEditor.EditorGUILayout.LabelField("How to Use", UnityEditor.EditorStyles.boldLabel);
 				UnityEditor.EditorGUILayout.HelpBox("You can create new prefabs using the button below or by adding the FaceFilter component to a new object. Filters can be part of this scene or inside separate prefabs to speedup loading time (recommended). Click the button below to create a new filter using our template prefab:", UnityEditor.MessageType.None);
 				var text = self.filters.Length <= 0 ? "Create Your First Filter" : "Create New Filter";

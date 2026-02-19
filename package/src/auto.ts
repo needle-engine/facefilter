@@ -1,5 +1,5 @@
 import { isDevEnvironment, onStart, showBalloonError, Vec3 } from "@needle-tools/engine";
-import { FaceFilterRoot, FaceMeshTexture, NeedleFaceFilterTrackingManager } from "..";
+import { FaceFilterRoot, FaceMeshTexture, NeedleTrackingManager } from "..";
 import { FaceLayout } from "./facemesh/utils.facemesh";
 
 /**
@@ -13,7 +13,7 @@ onStart(async ctx => {
 
         // Setup filter
         let filter: FaceFilterRoot | FaceMeshTexture | null = null;
-        let manager: NeedleFaceFilterTrackingManager | null = null;
+        let manager: NeedleTrackingManager | null = null;
 
         let maxFaces = 1;
         const maxFacesAttribute = ctx.domElement.getAttribute("face-filter-max-faces");
@@ -50,7 +50,7 @@ onStart(async ctx => {
             if (!faceFilterMask || !isImage(faceFilterMask)) {
                 faceFilterMask = undefined;
             }
-            manager = ctx.scene.addComponent(NeedleFaceFilterTrackingManager, { maxFaces: maxFaces });
+            manager = ctx.scene.addComponent(NeedleTrackingManager, { maxFaces: maxFaces });
             filter = new FaceMeshTexture({
                 layout: layout,
                 texture: {
@@ -79,7 +79,7 @@ onStart(async ctx => {
                 }
             }
 
-            manager = ctx.scene.addComponent(NeedleFaceFilterTrackingManager, { maxFaces: maxFaces });
+            manager = ctx.scene.addComponent(NeedleTrackingManager, { maxFaces: maxFaces });
             filter = await FaceFilterRoot.create(facefilterValue, {
                 scale: Number.isNaN(facefilterScale) ? 1 : facefilterScale || 1,
                 offset: faceFilterOffset,
@@ -148,7 +148,7 @@ onStart(async ctx => {
     }
 });
 
-function updateShowVideo(filter: NeedleFaceFilterTrackingManager, domElement:HTMLElement) {
+function updateShowVideo(filter: NeedleTrackingManager, domElement:HTMLElement) {
     const attributeValue = domElement.getAttribute("face-filter-show-video");
     if(attributeValue === null || attributeValue === undefined) {
         filter.showVideo = true;

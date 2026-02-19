@@ -26,10 +26,10 @@
     "@mediapipe/tasks-vision": "0.10.14"
   },
   "peerDependencies": {
-	  "three": "npm:@needle-tools/three@0.169.11"
+	  "three": ">= npm:@needle-tools/three@0.169.11"
 	},
   "devDependencies": {
-	  "@needle-tools/engine": "4.10.2",
+	  "@needle-tools/engine": "4.11.4",
 	  "@types/three": "0.169.0",
 	  "esbuild": "^0.25.1",
 	  "three": "npm:@needle-tools/three@0.169.11"

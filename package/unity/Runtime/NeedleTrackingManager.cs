@@ -5,7 +5,7 @@
 
 namespace Needle.Typescript.GeneratedComponents
 {
-	public partial class NeedleFilterTrackingManager : UnityEngine.MonoBehaviour
+	public partial class NeedleTrackingManager : UnityEngine.MonoBehaviour
 	{
 		public bool @autoManagePerformance = true;
 		public float @maxFaces = 1f;
