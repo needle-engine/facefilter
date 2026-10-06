@@ -1,6 +1,6 @@
 {
     "name": "com.needle.face-filter",
-    "version": "1.0.0",
+    "version": "1.0.5",
     "displayName": "Needle Engine FaceFilter",
     "description": "Create FaceFilter effects with Needle Engine and Mediapipe",
     "dependencies": {

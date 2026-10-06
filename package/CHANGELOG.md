@@ -4,6 +4,11 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.0.5] - 2026-10-06
+- Fix Facefilter builds with Needle Engine 5.1 and 6 alpha projects using Vite 8.
+- Allow custom recording logos and download names in all Facefilter projects.
+- Allow Facefilter to use the same Three.js version as the project.
+
 ## [1.0.4] - 2025-10-29
 - Add: Expose base `FaceFilterBehaviour` for implementing custom filter behaviours.
 - Add: The `FaceFilterRoot` class that is automatically added to every filter instance now exposed access to the filter manager and face index. This provides an alternative way to access face data for components that don't derive from FaceFilterBehaviour.

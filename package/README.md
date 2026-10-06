@@ -14,7 +14,9 @@ Add face tracking to your Needle Engine projects with ease.
 
 ## Quickstart
 
-Run `npm i @needle-tools/facefilter` in your web project   
+Run `npm i @needle-tools/facefilter` in your web project.
+
+Use the same `three` version as your Needle Engine installation in the web project. This keeps Facefilter and the engine on one Three.js copy.
 
 Then see the code or examples below:
 

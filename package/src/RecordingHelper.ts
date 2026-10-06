@@ -1,4 +1,4 @@
-import { Context, disposeObjectResources, getIconElement, hasCommercialLicense, hasProLicense, isDevEnvironment, ObjectUtils, showBalloonError, showBalloonMessage, showBalloonWarning } from "@needle-tools/engine";
+import { Context, disposeObjectResources, getIconElement, isDevEnvironment, ObjectUtils, showBalloonError, showBalloonMessage, showBalloonWarning } from "@needle-tools/engine";
 import { DoubleSide, MeshBasicMaterial, Object3D, PerspectiveCamera, Texture, TextureLoader, Vector3 } from "three";
 
 
@@ -155,11 +155,7 @@ export class NeedleRecordingHelper {
 
         let downloadName = "needle-engine-facefilter";
         if (opts?.download_name?.length) {
-            if (hasProLicense())
-                downloadName = opts.download_name;
-            else {
-                console.warn("Needle Engine Pro is required to set a custom download name");
-            }
+            downloadName = opts.download_name;
         }
         downloadName += "." + ext;
         console.debug("Downloading recording as " + downloadName);
@@ -202,15 +198,10 @@ class Watermark {
     static async add(context: Context, logo: Texture | null) {
         this.active = true;
         if (!this.object) {
-            const allowCustomLogo = hasProLicense();
-            if (!logo || !allowCustomLogo) {
+            if (!logo) {
                 const url = "https://cdn.needle.tools/static/branding/logo_needle_white_no_padding.png";
                 const textureLoader = new TextureLoader();
                 this.texture = await textureLoader.loadAsync(url);
-                if (logo) {
-                    const msg = "\n\nTo use a custom logo in your face filter please upgrade to Needle Engine Pro for custom branding: https://needle.tools/pricing\n\n";
-                    console.warn(msg);
-                }
             }
             else {
                 this.texture = logo;

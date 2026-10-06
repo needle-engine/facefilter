@@ -90,16 +90,14 @@ export class NeedleFilterTrackingManager extends Behaviour {
     @serializable()
     createShareButton: boolean = true;
 
-    /** Assign a texture to display your logo in the recorded video.   
-     * Note: this requires an active PRO license: https://needle.tools/pricing
+    /** Assign a texture to display your logo in the recorded video.
      * @default null
      */
     // @nonSerialized
     @serializable(Texture)
     customLogo: Texture | null = null;
 
-    /** The name of the downloaded video. If null the video will not be downloadable  
-     * Note: this requires an active PRO license: https://needle.tools/pricing
+    /** Optional name of the downloaded video. If unset, the default name is used.
      */
     // @nonSerialized
     downloadName: string | null = null;

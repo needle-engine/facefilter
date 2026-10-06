@@ -1,6 +1,6 @@
 {
   "name": "@needle-tools/facefilter",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Create FaceFilter effects with Needle Engine and Mediapipe",
   "main": "index.ts",
   "exports": {
@@ -26,13 +26,13 @@
     "@mediapipe/tasks-vision": "0.10.14"
   },
   "peerDependencies": {
-	  "three": "npm:@needle-tools/three@0.169.11"
-	},
+    "three": ">=0.169.19 <0.186.0 || >=0.185.2-alpha.0 <0.186.0"
+  },
   "devDependencies": {
-	  "@needle-tools/engine": "4.10.2",
+	  "@needle-tools/engine": "5.1.14",
 	  "@types/three": "0.169.0",
-	  "esbuild": "^0.25.1",
-	  "three": "npm:@needle-tools/three@0.169.11"
+	  "esbuild": "0.28.2",
+	  "three": "npm:@needle-tools/three@0.169.19"
 	},
   "repository": {
     "type": "git",
