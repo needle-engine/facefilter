@@ -9,6 +9,7 @@ namespace Needle.Typescript.GeneratedComponents
 	{
 		public bool @autoManagePerformance = true;
 		public float @maxFaces = 1f;
+		public float @maxHands = 0f;
 		public bool @showVideo = true;
 		public UnityEngine.Transform[] @filters = new UnityEngine.Transform[]{ };
 		public UnityEngine.Transform @occlusionMesh;

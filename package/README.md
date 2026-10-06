@@ -9,6 +9,7 @@ Add face tracking to your Needle Engine projects with ease.
 - Video face tracking: Play a video as a face texture (Use the `FaceMeshVideo` class)
 - Custom shader face meshes: Use custom materials on your face mesh (Use the `FaceMeshCustomShader` class)
 - Tracking for multiple faces at once (with smoothing)
+- Hand tracking with stable Three.js joint anchors
 - *Can be used with Unity to create filters, animations, materials...*
 
 
@@ -19,6 +20,37 @@ Run `npm i @needle-tools/facefilter` in your web project.
 Use the same `three` version as your Needle Engine installation in the web project. This keeps Facefilter and the engine on one Three.js copy.
 
 Then see the code or examples below:
+
+### Hand tracking
+
+Hand tracking uses MediaPipe's image and metric 3D landmarks to place joints in
+Needle Engine's camera space. Attach a Three.js object to a stable joint before
+or after a hand is detected. The package handles video mirroring, depth,
+position, rotation, and temporary loss of tracking.
+
+```ts
+import { NeedleTrackingManager } from "@needle-tools/facefilter";
+import { onStart, ObjectUtils } from "@needle-tools/engine";
+
+onStart(context => {
+  const manager = context.scene.addComponent(NeedleTrackingManager, {
+    maxFaces: 0,
+    maxHands: 2,
+  });
+  const marker = ObjectUtils.createPrimitive("Sphere", { scale: .02 });
+  manager.getHand("Right").attachToHand(marker, "index_finger_tip");
+});
+```
+
+`getHand("Left")` and `getHand("Right")` return stable handles. `hand.getJoint(name)`
+returns the underlying `Object3D` anchor if you want to parent several objects
+or read its world transform. Anchors are hidden while the hand is not tracked.
+For alignment debugging, add `?debughands` to the page URL. It draws the detected
+hand skeleton over the video and shows projected 3D joint markers.
+Joint local +Z follows the finger and local +Y faces the palm side.
+
+The 3D camera distance is estimated from the hand model; a single camera cannot
+measure exact physical distance.
 
 
 ### Face Filter with HTML only
@@ -77,13 +109,13 @@ See full examples in `/examples/html/`
 
 ```ts
 import { onStart } from '@needle-tools/engine';
-import { FaceMeshTexture, NeedleFaceFilterTrackingManager } from '@needle-tools/facefilter';
+import { FaceMeshTexture, NeedleTrackingManager } from '@needle-tools/facefilter';
 
 onStart(context => {
   const scene = context.scene;
 
   // Create a face filter tracking manager and add it to the scene
-  const filtermanager = new NeedleFaceFilterTrackingManager();
+  const filtermanager = new NeedleTrackingManager();
   filtermanager.createMenuButton = true;
   scene.addComponent(filtermanager);
 
@@ -108,13 +140,13 @@ onStart(context => {
 
 ```ts
 import { onStart } from '@needle-tools/engine';
-import { FaceMeshTexture, NeedleFaceFilterTrackingManager } from '@needle-tools/facefilter';
+import { FaceMeshTexture, NeedleTrackingManager } from '@needle-tools/facefilter';
 
 onStart(context => {
   const scene = context.scene;
 
   // Create a face filter tracking manager and add it to the scene
-  const filtermanager = new NeedleFaceFilterTrackingManager();
+  const filtermanager = new NeedleTrackingManager();
   filtermanager.createMenuButton = false;
   scene.addComponent(filtermanager);
 

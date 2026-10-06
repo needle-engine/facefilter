@@ -57,6 +57,7 @@ export namespace FacefilterUtils {
     }
     const REFERENCE_DEPTH = -.3; // The Z distance in Three.js units where you measured
     const REFERENCE_APPARENT_SIZE = .3; // The measured normalized distance (e.g., wrist-to-middleMCP) at REFERENCE_DEPTH
+    /** @deprecated Uses a fixed apparent hand size. HandInstance now fits image and world landmarks internally. */
     export function calculateDepth(landmark1: Vector3Like, landmark2: Vector3Like) {
         const currentApparentSize = getNormalizedDistance(landmark1.x, landmark1.y, landmark2.x, landmark2.y);
         let estimatedWristDepth = REFERENCE_DEPTH;
@@ -67,6 +68,7 @@ export namespace FacefilterUtils {
         return estimatedWristDepth;
     }
 
+    /** @deprecated Use HandInstance.getJoint() for camera-aligned hand objects. */
     export function normalizedLandmarkerToCamera(landmark: Vector3Like, camera: PerspectiveCamera, videoWidth: number, videoHeight: number, baseDepth = .3, zScaleFactor = .5) {
 
         const aspect = videoWidth / videoHeight;

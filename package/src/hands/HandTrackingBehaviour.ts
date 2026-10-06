@@ -1,8 +1,8 @@
 import { HandLandmarkerResult } from "@mediapipe/tasks-vision";
-import { Behaviour, IComponent } from "@needle-tools/engine";
+import { Behaviour, IComponent, serializable } from "@needle-tools/engine";
 import { Bone, Matrix4, PerspectiveCamera, SkinnedMesh, Vector3 } from "three";
+import { NeedleTrackingManager } from "../TrackingManager.js";
 import type { HandInstance } from "../TrackingManager.js";
-import { FacefilterUtils } from "../utils.js";
 
 interface IHandTrackingBehaviour extends Pick<IComponent, "enabled"> {
     onUpdateHandTracking(hand: HandInstance, res: HandLandmarkerResult, index: number, baseDepth: number): void;
@@ -10,14 +10,26 @@ interface IHandTrackingBehaviour extends Pick<IComponent, "enabled"> {
 
 export class HandTrackingBehaviour extends Behaviour {
 
+    @serializable()
+    handedness: "Left" | "Right" = "Right";
+
     private readonly _handBehaviours: IHandTrackingBehaviour[] = [];
 
     awake() {
         this._handBehaviours.push(this.gameObject.getOrAddComponent(HandTrackingSkinnedMeshRenderer));
     }
 
+    start() {
+        NeedleTrackingManager.instance?.getHand(this.handedness).addBehaviour(this);
+    }
+
+    onDestroy() {
+        NeedleTrackingManager.instance?.getHand(this.handedness).removeBehaviour(this);
+    }
+
     onUpdateHandTracking(hand: HandInstance, res: HandLandmarkerResult, index: number, baseDepth: number) {
 
+        this.gameObject.visible = true;
         const camera = this.context.mainCamera;
 
         if (this.gameObject.parent !== camera) {
@@ -79,33 +91,27 @@ export class HandTrackingSkinnedMeshRenderer extends Behaviour implements IHandT
         this._sortedBones = entries;
     }
 
-    onUpdateHandTracking(hand: HandInstance, res: HandLandmarkerResult, handIndex: number, baseDepth: number): void {
+    onUpdateHandTracking(hand: HandInstance, _res: HandLandmarkerResult, _handIndex: number, _baseDepth: number): void {
         const camera = this.context.mainCamera;
         if (!(camera instanceof PerspectiveCamera)) return;
 
-        const handLm = res.landmarks[handIndex];
-        const manager = hand.manager;
+        // Joint positions are already fitted to the camera image by HandInstance.
+        camera.updateWorldMatrix(true, false);
 
         // Process bones from root to leaf so parent transforms are up-to-date
         for (const { bone, jointIndex } of this._sortedBones) {
             if (!bone.visible) continue;
 
-            const landmark = handLm[jointIndex];
-            if (!landmark) continue;
-
-            const cameraPos = FacefilterUtils.normalizedLandmarkerToCamera(
-                landmark, camera, manager.videoWidth, manager.videoHeight, baseDepth
-            );
-
-            // Convert camera-space position to bone's parent local space
+            if (!hand.getJointPosition(jointIndex, _localPos)) continue;
+            // The joint is camera-local. Bone parents use world space, so pass
+            // through the camera transform before converting to parent-local.
+            _localPos.applyMatrix4(camera.matrixWorld);
             if (bone.parent) {
                 bone.parent.updateWorldMatrix(true, false);
                 _parentInverse.copy(bone.parent.matrixWorld).invert();
-                _localPos.copy(cameraPos).applyMatrix4(_parentInverse);
-                bone.position.copy(_localPos);
-            } else {
-                bone.position.copy(cameraPos);
+                _localPos.applyMatrix4(_parentInverse);
             }
+            bone.position.copy(_localPos);
         }
     }
 }

@@ -9,16 +9,16 @@
     "gltf:transform": "npm run transform --prefix node_modules/@needle-tools/gltf-build-pipeline"
   },
   "dependencies": {
-    "@needle-tools/engine": "^4.4.2",
+    "@needle-tools/engine": "5.1.14",
     "@needle-tools/facefilter": "file:../..",
-    "three": "npm:@needle-tools/three@^0.169.5"
+    "three": "npm:@needle-tools/three@0.169.19"
   },
   "devDependencies": {
     "@needle-tools/helper": "1.11.3",
     "@types/three": "0.169.0",
-    "@vitejs/plugin-basic-ssl": "^1.0.1",
+    "@vitejs/plugin-basic-ssl": "2.3.0",
     "typescript": "^5.0.4",
-    "vite": "<= 4.3.9",
+    "vite": "8.0.3",
     "vite-plugin-compression": "^0.5.1"
   }
 }

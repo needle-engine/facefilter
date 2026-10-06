@@ -4,6 +4,10 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+- Add stable hand joints for attaching Three.js objects without camera or depth setup.
+- Improve hand alignment and recovery after tracking is briefly lost.
+
 ## [1.0.5] - 2026-10-06
 - Fix Facefilter builds with Needle Engine 5.1 and 6 alpha projects using Vite 8.
 - Allow custom recording logos and download names in all Facefilter projects.

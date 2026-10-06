@@ -9,6 +9,7 @@ export default defineConfig(async ({ command }) => {
 
     return {
         base: "./",
+        resolve: { dedupe: ["@needle-tools/engine", "three"] },
         plugins: [
             basicSsl(),
             useGzip(needleConfig) ? viteCompression({ deleteOriginFile: true, verbose: false }) : null,

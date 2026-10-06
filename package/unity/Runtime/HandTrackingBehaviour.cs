@@ -7,6 +7,7 @@ namespace Needle.Typescript.GeneratedComponents
 {
 	public partial class HandTrackingBehaviour : UnityEngine.MonoBehaviour
 	{
+		public string @handedness = "Right";
 		public void awake(){}
 		public void onUpdateHandTracking(object @hand, object @res, float @index, float @baseDepth){}
 	}

@@ -525,7 +525,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 6353b3654683b8d00cb8547a2642cc07, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Needle.Typescript.GeneratedComponents.NeedleFilterTrackingManager,
+  m_EditorClassIdentifier: Needle.Typescript.GeneratedComponents.NeedleTrackingManager,
     Needle.Engine-Samples.Runtime
   autoManagePerformance: 1
   maxFaces: 1

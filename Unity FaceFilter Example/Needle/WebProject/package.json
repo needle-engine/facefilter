@@ -8,16 +8,16 @@
     "build:production": "vite build -- --production"
   },
   "dependencies": {
-	  "@needle-tools/engine": "4.11.4",
-	  "three": "npm:@needle-tools/three@0.169.11",
+	  "@needle-tools/engine": "5.1.14",
+	  "three": "npm:@needle-tools/three@0.169.19",
 	  "@needle-tools/facefilter": "file:./../../../package"
 	},
   "devDependencies": {
 	  "@needle-tools/helper": "1.11.5",
 	  "@types/three": "0.169.0",
-	  "@vitejs/plugin-basic-ssl": "^1.0.1",
+	  "@vitejs/plugin-basic-ssl": "2.3.0",
 	  "typescript": "^5.0.4",
-	  "vite": "<= 4.3.9",
+	  "vite": "8.0.3",
 	  "vite-plugin-compression": "^0.5.1"
 	}
 }

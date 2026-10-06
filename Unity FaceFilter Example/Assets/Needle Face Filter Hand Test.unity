@@ -683,12 +683,13 @@ MonoBehaviour:
   m_GameObject: {fileID: 1387623546}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 83c3f8d1947c9fb47a379d5d079423cf, type: 3}
+  m_Script: {fileID: 11500000, guid: 6353b3654683b8d00cb8547a2642cc07, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Needle.Typescript.GeneratedComponents.NeedleFilterTrackingManager,
+  m_EditorClassIdentifier: Needle.Typescript.GeneratedComponents.NeedleTrackingManager,
     Needle.Engine-Samples.Runtime
   autoManagePerformance: 1
   maxFaces: 1
+  maxHands: 2
   showVideo: 1
   filters:
   - {fileID: 935870551}
