@@ -4,6 +4,7 @@ using UnityEngine;
 
 namespace Needle.Typescript.GeneratedComponents
 {
+	[UnityEngine.Scripting.APIUpdating.MovedFrom(true, sourceNamespace: "Needle.Typescript.GeneratedComponents", sourceAssembly: "Needle.Facefilter.Runtime", sourceClassName: "NeedleFilterTrackingManager")]
 	[AddComponentMenu("Needle Engine/Face Filter/Face Filter Tracking Manager")]
 	public partial class NeedleTrackingManager
 	{

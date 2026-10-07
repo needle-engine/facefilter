@@ -320,3 +320,21 @@ current filtered finger segment exactly, while rotation around it is smoothed.
 This prevents attachment rotation lag from tilting the band across the finger.
 The mode is included in recordings. It does not correct biased landmark depth
 or an incorrect inferred palm normal; it removes the additional axis lag.
+
+
+### Upgrading Unity projects from 1.x to 2.x
+
+Update the Unity package `com.needle.face-filter` and the web dependency
+`@needle-tools/facefilter` together. Use the matching 2.x prerelease for both;
+keep existing 1.x projects on their pinned versions until you migrate them.
+The publish helper synchronizes the bundled Unity `package.json` and
+`needle-facefilter.npmdef` with the npm release version during `prepublishOnly`.
+
+The manager is now `NeedleTrackingManager`. Its script GUID is unchanged, and
+its hand-written partial class has `MovedFrom` metadata for the old
+`NeedleFilterTrackingManager` class. Open an existing scene and verify that
+its manager and filter references are intact. Update custom C# and TypeScript
+references to the new name; replace `getActiveFaceObjects()` with `.faces`.
+Re-export existing scenes for the new runtime type registration. Previously
+exported web scenes using the old component name must not be paired with the
+2.x runtime without migration.

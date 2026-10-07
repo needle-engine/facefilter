@@ -17,5 +17,6 @@
     "noImplicitAny": false,
     "experimentalDecorators": true
   },
-  "include": [".", "examples/html/facefilter.min.js"]
+  "include": ["index.ts", "src/**/*.ts", "codegen/**/*.ts"],
+  "exclude": ["node_modules", "lib", "dist", "tests"]
 }
