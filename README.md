@@ -1,6 +1,6 @@
 # Needle Engine FaceFilter
 
-Add face tracking to your [Needle Engine](https://needle.tools) projects with ease.  
+Add face and hand tracking to your [Needle Engine](https://needle.tools) projects with ease.
 This project contains the sourcecode for the facefilter package as well as an example Unity project (see [quickstart](#quickstart) below for how to get started without an editor)
 
 
@@ -23,6 +23,52 @@ This project contains the sourcecode for the facefilter package as well as an ex
 - Tracking for multiple faces at once (with smoothing)
 - *Can be used with Unity to create filters, animations, materials...*
 
+
+## 2.0.0 beta: hand tracking demo
+
+The working package version is `2.0.0-beta.0`. See the [package README](package/README.md#hand-tracking) for the attachment API and the [changelog](package/CHANGELOG.md) for changes.
+
+### Run the web demo
+
+From the repository root, install the package and start the example (Node.js 24 recommended):
+
+```sh
+cd package
+npm ci
+cd "../Unity FaceFilter Example/Needle/WebProject"
+npm ci
+npm start
+```
+
+Open the HTTPS address printed by Vite and allow camera access. The default demo loads a [ring asset](https://cloud.needle.tools/-/assets/Z23hmXB12yGTI-ZAqHd0-optimized/file.glb) and attaches an instance to each tracked ring finger. Its starting outer diameter is approximately 22 mm; placement and fit are approximate. The demo does not implement hand occlusion, so the ring's far side can remain visible through the finger.
+
+### Debug hand tracking
+
+Add these parameters to the demo URL:
+
+| URL query | Result |
+| --- | --- |
+| No query | Ring demo without diagnostic markers or panel |
+| `?debughandtracking` | Skeleton, 16 orientation markers per hand, labels, and capture panel |
+| `?debughandtracking&ring` | Ring plus diagnostics |
+
+`?debughands` remains an alias for existing bookmarks. Reload after changing the query. The debug UI lives in `src/handTrackingDebug.ts` and is imported only when enabled; `src/main.ts` contains the ring demo and startup code.
+
+Use the panel to isolate a finger or the palm, toggle labels, or show white pad-normal arrows. Blue arrows point toward the fingertip; green faces mark the finger pad and red faces mark the back. T/I/M/R/P mean thumb/index/middle/ring/pinky; 1/2/3 mean base/middle/tip segments. The angle readout describes the index fingertip marker (I3).
+
+**Save hand landmarks** downloads one frame. **Capture 5 seconds of tracking** downloads 50 samples at a nominal 10 Hz. Captures contain normalized and metric landmarks, camera settings, and marker transforms; they contain no camera images or audio.
+
+### Replay and test without a camera
+
+From `package`, run:
+
+```sh
+npm test
+node --experimental-strip-types tests/replay-hand-frame.mjs "path/to/facefilter-hand-sequence.json"
+node --experimental-strip-types tests/replay-hand-frame.mjs "path/to/facefilter-hand-frame.json" --json
+```
+
+Replay accepts a single frame or a sequence. It reports marker tilt, pitch, and roll; `--json` emits results for scripts and AI agents. Tests include sanitized straight and curled hand fixtures. These checks validate geometry and regression behavior; they do not establish the true physical pose from a single camera.
 
 # Examples
 - [Example with Blendshapes on Stackblitz](https://stackblitz.com/edit/needle-engine-facefilter-blendshapes?file=src%2Fmain.ts)
@@ -106,13 +152,13 @@ See full examples in [/examples/html/](/package/examples/)
 
 ```ts
 import { onStart } from '@needle-tools/engine';
-import { FaceMeshTexture, NeedleFaceFilterTrackingManager } from '@needle-tools/facefilter';
+import { FaceMeshTexture, NeedleTrackingManager } from '@needle-tools/facefilter';
 
 onStart(context => {
   const scene = context.scene;
 
   // Create a face filter tracking manager and add it to the scene
-  const filtermanager = new NeedleFaceFilterTrackingManager();
+  const filtermanager = new NeedleTrackingManager();
   filtermanager.createMenuButton = true;
   scene.addComponent(filtermanager);
 
@@ -137,13 +183,13 @@ onStart(context => {
 
 ```ts
 import { onStart } from '@needle-tools/engine';
-import { FaceMeshTexture, NeedleFaceFilterTrackingManager } from '@needle-tools/facefilter';
+import { FaceFilterRoot, NeedleTrackingManager } from '@needle-tools/facefilter';
 
-onStart(context => {
+onStart(async context => {
   const scene = context.scene;
 
   // Create a face filter tracking manager and add it to the scene
-  const filtermanager = new NeedleFaceFilterTrackingManager();
+  const filtermanager = new NeedleTrackingManager();
   filtermanager.createMenuButton = false;
   scene.addComponent(filtermanager);
 

@@ -4,9 +4,12 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## [2.0.0-beta.0] - 2026-10-07
 - Add stable hand joints for attaching Three.js objects without camera or depth setup.
 - Improve hand alignment and recovery after tracking is briefly lost.
+- Use MediaPipe image XYZ consistently for hand positions and finger orientation.
+- Share a stable hand scale across left and right hand attachments.
+- Add hand orientation markers, landmark capture, and recorded-pose regression tests for development.
 
 ## [1.0.5] - 2026-10-06
 - Fix Facefilter builds with Needle Engine 5.1 and 6 alpha projects using Vite 8.

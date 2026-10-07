@@ -1,20 +1,28 @@
-import { Vector3 } from "three";
+import { Quaternion, Vector3 } from "three";
 
-/** Build a finger-local frame with a consistent side as the finger curls. */
+const fingerBend = new Quaternion();
+
+/** Carry the pad-facing orientation from the finger base into the tracked segment. */
 export function buildFingerBasis(forward: Vector3, palmSide: Vector3, palmFacing: Vector3, referenceForward: Vector3, right: Vector3, up: Vector3): boolean {
-    // Choose the palm-facing side near the finger base. Comparing at the tip
-    // can flip the orientation when the finger curls beyond 90 degrees.
-    const reverseSide = up.crossVectors(referenceForward, palmSide).dot(palmFacing) < 0;
-    right.copy(palmSide).addScaledVector(forward, -palmSide.dot(forward));
-    const hasStableSide = right.lengthSq() >= 1e-8;
-    if (!hasStableSide) right.crossVectors(palmFacing, forward);
-    if (right.lengthSq() < 1e-8) {
-        right.set(1, 0, 0).addScaledVector(forward, -forward.x);
-        if (right.lengthSq() < 1e-8) right.set(0, 1, 0).addScaledVector(forward, -forward.y);
+    if (forward.lengthSq() < 1e-8 || referenceForward.lengthSq() < 1e-8) return false;
+    // Establish the pad at the base using the palm normal. A cross-palm side
+    // projected independently onto each bone can add roll to splayed fingers.
+    up.copy(palmFacing).addScaledVector(referenceForward, -palmFacing.dot(referenceForward));
+    if (up.lengthSq() < 1e-8) {
+        up.crossVectors(referenceForward, palmSide);
+        if (up.dot(palmFacing) < 0) up.negate();
     }
-    if (right.lengthSq() < 1e-8) return false;
-    right.normalize();
-    if (hasStableSide && reverseSide) right.negate();
-    up.crossVectors(forward, right).normalize();
+    if (up.lengthSq() < 1e-8) return false;
+    up.normalize();
+    right.crossVectors(up, referenceForward).normalize();
+
+    // Bend the complete frame, retaining the base orientation around the finger.
+    // For an exactly folded finger, use its side as the flexion axis.
+    if (referenceForward.dot(forward) < -1 + 1e-6)
+        fingerBend.setFromAxisAngle(right, Math.PI);
+    else
+        fingerBend.setFromUnitVectors(referenceForward, forward);
+    right.applyQuaternion(fingerBend);
+    up.applyQuaternion(fingerBend);
     return true;
 }

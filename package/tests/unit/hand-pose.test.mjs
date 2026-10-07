@@ -1,6 +1,6 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
-import { estimateHandDepth, projectHandLandmark, cameraPalmNormal, fingerBendWeight, imageFingerDirection, worldPalmNormal } from "../../src/hands/HandPose.ts";
+import { estimateHandDepth, HandScaleReference, measurePalmSize, projectHandLandmark, cameraPalmNormal, fingerBendWeight, imageFingerDirection, worldPalmNormal } from "../../src/hands/HandPose.ts";
 
 const width = 1280, height = 720, fov = 63;
 const focal = height / (2 * Math.tan(fov * Math.PI / 360));
@@ -26,7 +26,7 @@ test("a turned palm does not change the estimated camera distance", () => {
     const projected = turned.map(p => ({
         x: .5 + p.x * focal / (width * (distance + p.z)),
         y: .5 + p.y * focal / (height * (distance + p.z)),
-        z: 0,
+        z: p.z * focal / (width * distance),
     }));
     const fitted = estimateHandDepth(projected, turned, width, height, fov);
     assert.ok(Math.abs(fitted - distance) < .05);
@@ -38,10 +38,10 @@ test("does not estimate distance from missing or collapsed landmarks", () => {
 });
 
 test("projects a joint onto its camera image location in mirrored and normal views", () => {
-    const landmark = { x: .25, y: .75, z: 0 };
+    const landmark = { x: .25, y: .75, z: -.02 };
     const target = { x: 0, y: 0, z: 0 };
     for (const mirrored of [true, false]) {
-        projectHandLandmark(landmark, { x: 0, y: 0, z: -.02 }, 0, .6, width / height, fov, mirrored, target);
+        projectHandLandmark(landmark, 0, .6, width / height, fov, mirrored, target);
         const halfHeight = -target.z * Math.tan(fov * Math.PI / 360);
         const recoveredX = .5 + target.x / (2 * halfHeight * width / height * (mirrored ? -1 : 1));
         const recoveredY = .5 - target.y / (2 * halfHeight);
@@ -96,11 +96,45 @@ test("finger direction remains in the camera plane despite fingertip depth", () 
     };
     assert.equal(up.z, direction.y * direction.y + direction.x * direction.x);
 });
-test("straight fingers use the palm pose and visibly bent fingers use the local pose", () => {
+test("bend diagnostic distinguishes straight fingers from curled fingers", () => {
     const base = { x: .5, y: .7, z: 0 };
     const middle = { x: .5, y: .6, z: 0 };
     assert.equal(fingerBendWeight(base, middle, { x: .5, y: .5, z: 0 }, 4 / 3), 0);
     assert.equal(fingerBendWeight(base, middle, { x: .6, y: .6, z: 0 }, 4 / 3), 1);
     const partial = fingerBendWeight(base, middle, { x: .53, y: .5, z: 0 }, 4 / 3);
     assert.ok(partial > 0 && partial < 1);
+});
+
+test("normalized depth uses image width, matches x units, and ignores wrist z origin", () => {
+    for (const aspect of [4 / 3, 9 / 16]) {
+        const project = p => projectHandLandmark(p, .03, .5, aspect, 60, false, { x: 0, y: 0, z: 0 });
+        const center = project({ x: .5, y: .5, z: .03 });
+        const horizontal = project({ x: .6, y: .5, z: .03 });
+        const closer = project({ x: .5, y: .5, z: -.07 });
+        assert.ok(Math.abs((horizontal.x - center.x) - (closer.z - center.z)) < 1e-8);
+        assert.equal(center.z, -.5);
+    }
+});
+
+test("hand-size reference prevents world-model size changes from changing distance", () => {
+    const reference = measurePalmSize(world);
+    const smallerWorld = world.map(p => ({ x: p.x * .5, y: p.y * .5, z: p.z * .5 }));
+    assert.ok(Math.abs(estimateHandDepth(image, smallerWorld, width, height, fov, reference) - distance) < 1e-8);
+    const closerImage = image.map(p => ({ x: .5 + (p.x - .5) * 2, y: .5 + (p.y - .5) * 2, z: p.z * 2 }));
+    assert.ok(Math.abs(estimateHandDepth(closerImage, world, width, height, fov, reference) - distance / 2) < 1e-8,
+        "actual image growth still moves the hand closer");
+});
+
+test("left and right hands share one scale despite different initial world-size estimates", () => {
+    const reference = new HandScaleReference();
+    assert.equal(reference.getOrInitialize([]), undefined);
+    const leftSize = reference.getOrInitialize(world);
+    const rightWorld = world.map(p => ({ x: -p.x * .6, y: p.y * .6, z: p.z * .6 }));
+    const rightImage = image.map(p => ({ x: 1 - p.x, y: p.y, z: p.z }));
+    const rightSize = reference.getOrInitialize(rightWorld);
+    assert.equal(leftSize, rightSize);
+    const leftDepth = estimateHandDepth(image, world, width, height, fov, leftSize);
+    const rightDepth = estimateHandDepth(rightImage, rightWorld, width, height, fov, rightSize);
+    assert.ok(Math.abs(leftDepth - rightDepth) < 1e-8, "matching apparent hands must render identical objects at the same scale");
+    assert.equal(reference.getOrInitialize([]), leftSize, "tracking loss must retain the shared reference");
 });

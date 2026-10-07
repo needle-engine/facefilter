@@ -52,3 +52,23 @@ test("mirrored left and right hands keep the palm-facing side", () => {
         assert.ok(up.dot(facing) > .99, `${side} palm faces its marker`);
     }
 });
+test("splayed straight fingers keep pad roll independent of the cross-palm axis", () => {
+    const palm = new Vector3(0, 0, 1);
+    for (const spread of [-.7, 0, .7]) {
+        const base = new Vector3(spread, 1, .3).normalize();
+        const expectedPad = palm.clone().addScaledVector(base, -palm.dot(base)).normalize();
+        for (const across of [new Vector3(1, 0, 0), new Vector3(1, .4, 0).normalize()]) {
+            const right = new Vector3(), up = new Vector3();
+            assert.ok(buildFingerBasis(base, across, palm, base, right, up));
+            assert.ok(up.distanceTo(expectedPad) < 1e-6, "a splayed finger retains its base pad orientation");
+        }
+    }
+});
+
+test("a fully folded finger retains its side and turns the pad over", () => {
+    const right = new Vector3(), up = new Vector3();
+    assert.ok(buildFingerBasis(new Vector3(0, -1, 0), new Vector3(1, 0, 0),
+        new Vector3(0, 0, 1), new Vector3(0, 1, 0), right, up));
+    assert.ok(right.distanceTo(new Vector3(-1, 0, 0)) < 1e-6);
+    assert.ok(up.distanceTo(new Vector3(0, 0, -1)) < 1e-6);
+});

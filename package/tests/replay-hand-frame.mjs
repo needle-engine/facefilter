@@ -1,68 +1,76 @@
-// Replays a frame saved by the demo's ?debughands button. No camera image is needed.
-// Usage: node --experimental-strip-types tests/replay-hand-frame.mjs path/to/facefilter-hand-frame.json
+// Replay a saved frame or sequence with the same projection and basis helpers as the runtime.
+// Usage: node --experimental-strip-types tests/replay-hand-frame.mjs <capture.json> [--json]
 import { readFile } from "node:fs/promises";
-import { Vector3 } from "three";
+import { pathToFileURL } from "node:url";
+import { Matrix4, Quaternion, Vector3 } from "three";
 import { buildFingerBasis } from "../src/hands/FingerPose.ts";
-import { cameraPalmNormal, estimateHandDepth, fingerBendWeight, imageFingerDirection, projectHandLandmark, worldPalmNormal } from "../src/hands/HandPose.ts";
+import { cameraPalmNormal, estimateHandDepth, projectHandLandmark } from "../src/hands/HandPose.ts";
 
-const filename = process.argv[2];
-if (!filename) {
-    console.error("Usage: node --experimental-strip-types tests/replay-hand-frame.mjs <capture.json>");
-    process.exit(2);
+const angle = (a, b) => Math.acos(Math.max(-1, Math.min(1, a.dot(b)))) * 180 / Math.PI;
+const segments = ["T", "I", "M", "R", "P"].flatMap((finger, index) =>
+    [1, 2, 3].map(segment => ({ name: `${finger}${segment}`, start: 1 + index * 4 + segment - 1, end: 2 + index * 4 + segment - 1, base: 1 + index * 4 })));
+segments.push({ name: "Palm", start: 0, end: 9, base: 0 });
+
+export function replayHandFrame(frame) {
+    const samples = [];
+    for (const hand of frame.hands) {
+        const image = hand.imageLandmarks;
+        const depth = hand.estimatedDepth || estimateHandDepth(image, hand.worldLandmarks,
+            frame.videoWidth, frame.videoHeight, frame.verticalFov);
+        if (!depth || image.length !== 21) throw new Error(`Incomplete ${hand.side} hand frame`);
+        const points = image.map(point => projectHandLandmark(point, image[0].z, depth,
+            frame.videoWidth / frame.videoHeight, frame.verticalFov, frame.mirrored, new Vector3()));
+        const normal = cameraPalmNormal(points, hand.side, new Vector3()).normalize();
+        if (!frame.mirrored) normal.negate();
+        const side = points[5].clone().sub(points[17]);
+        for (const { name, start, end, base } of segments) {
+            const forward = points[end].clone().sub(points[start]).normalize();
+            const reference = base === 0 ? forward : points[base + 1].clone().sub(points[base]).normalize();
+            const right = new Vector3(), up = new Vector3();
+            if (!buildFingerBasis(forward, side, normal, reference, right, up)) throw new Error(`Degenerate ${name} basis`);
+            const position = points[start].clone().add(points[end]).multiplyScalar(.5);
+            const view = position.clone().negate().normalize();
+            const rotation = new Quaternion().setFromRotationMatrix(new Matrix4().makeBasis(right, up, forward));
+            const recorded = hand.attachments?.find(marker => marker.name === name);
+            let recordedTilt = null;
+            if (recorded?.cameraQuaternion && recorded.cameraPosition) {
+                const recordedUp = new Vector3(0, 1, 0).applyQuaternion(new Quaternion().fromArray(recorded.cameraQuaternion));
+                const recordedView = new Vector3().fromArray(recorded.cameraPosition).negate().normalize();
+                recordedTilt = angle(recordedUp, recordedView);
+            }
+            samples.push({ name, side: hand.side, tilt: angle(up, view),
+                pitch: Math.asin(Math.max(-1, Math.min(1, forward.dot(view)))) * 180 / Math.PI,
+                roll: Math.atan2(right.dot(view), up.dot(view)) * 180 / Math.PI,
+                recordedTilt, position: position.toArray(), rotation: rotation.toArray() });
+        }
+    }
+    return samples;
 }
-const capture = JSON.parse(await readFile(filename, "utf8"));
-const aspect = capture.videoWidth / capture.videoHeight;
-const toDegrees = value => Math.acos(Math.max(-1, Math.min(1, value))) * 180 / Math.PI;
 
-for (const hand of capture.hands) {
-    const image = hand.imageLandmarks;
-    const world = hand.worldLandmarks;
-    const depth = hand.estimatedDepth || estimateHandDepth(image, world, capture.videoWidth, capture.videoHeight, capture.verticalFov);
-    if (!depth || !image?.[8] || !world?.[0]) throw new Error(`Incomplete ${hand.side} hand frame`);
-    const project = index => projectHandLandmark(image[index], world[index], world[0].z, depth,
-        aspect, capture.verticalFov, capture.mirrored, new Vector3());
-    const points = [];
-    for (const index of [0, 5, 9, 13, 17]) points[index] = project(index);
-    const worldNormal = worldPalmNormal(world, capture.mirrored, hand.side, new Vector3()).normalize();
-    const projectedNormal = cameraPalmNormal(points, hand.side, new Vector3()).normalize();
-    const forward = imageFingerDirection(image[7], image[8], aspect, capture.mirrored, new Vector3()).normalize();
-    const midpoint = project(7).add(project(8)).multiplyScalar(.5);
-    const view = midpoint.clone().negate().normalize();
-    const tilt = normal => toDegrees(normal.dot(view));
-    const resolved = normal => {
-        const right = new Vector3().crossVectors(normal, forward).normalize();
-        return new Vector3().crossVectors(forward, right).normalize();
-    };
-    const worldPoint = index => new Vector3(
-        world[index].x * (capture.mirrored ? -1 : 1), -world[index].y, -world[index].z);
-    const worldFinger = worldPoint(8).sub(worldPoint(6));
-    const fingerXY = Math.hypot(worldFinger.x, worldFinger.y);
-    const localForward = forward.clone().setZ(fingerXY > 1e-6 ? worldFinger.z / fingerXY : 0).normalize();
-    const localRight = worldPoint(5).sub(worldPoint(17));
-    localRight.addScaledVector(localForward, -localRight.dot(localForward)).normalize();
-    const localUp = new Vector3().crossVectors(localForward, localRight).normalize();
-    if (localUp.dot(worldNormal) < 0) localUp.negate();
-    const rayForward = project(8).sub(project(6)).normalize();
-    const raySide = worldPoint(5).sub(worldPoint(17));
-    const rayRight = new Vector3();
-    const rayUp = new Vector3();
-    buildFingerBasis(rayForward, raySide, worldNormal, worldPoint(6).sub(worldPoint(5)).normalize(), rayRight, rayUp);
-    console.log(JSON.stringify({
-        side: hand.side,
-        depth,
-        worldTilt: tilt(worldNormal),
-        projectedTilt: tilt(projectedNormal),
-        worldResolvedTilt: tilt(resolved(worldNormal)),
-        projectedResolvedTilt: tilt(resolved(projectedNormal)),
-        fingerLocalTilt: tilt(localUp),
-        rayFingerLocalTilt: tilt(rayUp),
-        straightToLocalSideDot: new Vector3().crossVectors(worldNormal, forward).normalize().dot(rayRight),
-        bendWeight: fingerBendWeight(image[5], image[6], image[8], aspect),
-        imageBendAngle: toDegrees(new Vector3(image[6].x - image[5].x, image[5].y - image[6].y, 0).normalize().dot(new Vector3(image[8].x - image[6].x, image[6].y - image[8].y, 0).normalize())),
-        rayFingerDepthAngle: Math.atan2(rayForward.z, Math.hypot(rayForward.x, rayForward.y)) * 180 / Math.PI,
-        fingerDepthAngle: Math.atan2(localForward.z, Math.hypot(localForward.x, localForward.y)) * 180 / Math.PI,
-        worldNormal: worldNormal.toArray(),
-        projectedNormal: projectedNormal.toArray(),
-        fingerDirection: forward.toArray(),
-    }, null, 2));
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+    const filename = process.argv[2];
+    if (!filename) throw new Error("Usage: replay-hand-frame.mjs <capture.json> [--json]");
+    const capture = JSON.parse(await readFile(filename, "utf8"));
+    const frames = capture.frames ?? [capture];
+    const results = frames.map(replayHandFrame);
+    if (process.argv.includes("--json")) console.log(JSON.stringify(results));
+    else {
+        const groups = new Map();
+        for (const sample of results.flat()) {
+            const key = `${sample.side} ${sample.name}`;
+            if (!groups.has(key)) groups.set(key, []);
+            groups.get(key).push(sample);
+        }
+        const median = values => {
+            values.sort((a, b) => a - b);
+            return +values[Math.floor(values.length / 2)].toFixed(1);
+        };
+        console.log(`Replayed ${frames.length} frames. Angles in degrees; surface tilt 0 faces the camera.`);
+        console.table([...groups].map(([marker, samples]) => ({ marker,
+            recordedTilt: samples[0].recordedTilt === null ? null : median(samples.map(s => s.recordedTilt)),
+            currentTilt: median(samples.map(s => s.tilt)),
+            currentRange: `${Math.min(...samples.map(s => s.tilt)).toFixed(1)} - ${Math.max(...samples.map(s => s.tilt)).toFixed(1)}`,
+            pitch: median(samples.map(s => s.pitch)), roll: median(samples.map(s => s.roll))
+        })));
+    }
 }

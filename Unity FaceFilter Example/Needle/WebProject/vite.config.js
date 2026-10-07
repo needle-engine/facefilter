@@ -16,6 +16,8 @@ export default defineConfig(async ({ command }) => {
             needlePlugins(command, needleConfig, { disableLogging: true, allowHotReload: false }),
         ],
         server: {
+            // Vite 8 forwarding can recursively report errors before its socket is ready.
+            forwardConsole: false,
             https: true,
             proxy: { // workaround: specifying a proxy skips HTTP2 which is currently problematic in Vite since it causes session memory timeouts.
                 'https://localhost:3000': 'https://localhost:3000'

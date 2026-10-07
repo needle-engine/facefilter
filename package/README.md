@@ -1,6 +1,6 @@
 # Needle Engine FaceFilter
 
-Add face tracking to your Needle Engine projects with ease.
+Add face and hand tracking to your Needle Engine projects with ease.
 
 
 # Features
@@ -13,6 +13,8 @@ Add face tracking to your Needle Engine projects with ease.
 - *Can be used with Unity to create filters, animations, materials...*
 
 
+Current development version: **2.0.0-beta.0**.
+
 ## Quickstart
 
 Run `npm i @needle-tools/facefilter` in your web project.
@@ -23,8 +25,9 @@ Then see the code or examples below:
 
 ### Hand tracking
 
-Hand tracking uses MediaPipe's image and metric 3D landmarks to place joints in
-Needle Engine's camera space. Attach a Three.js object to a stable joint before
+Hand tracking uses MediaPipe's normalized image XYZ landmarks for position and
+orientation in Needle Engine's camera space. Metric landmarks initialize a
+shared hand-size reference for depth estimation. Attach a Three.js object to a stable joint before
 or after a hand is detected. The package handles video mirroring, depth,
 position, rotation, and temporary loss of tracking.
 
@@ -45,9 +48,17 @@ onStart(context => {
 `getHand("Left")` and `getHand("Right")` return stable handles. `hand.getJoint(name)`
 returns the underlying `Object3D` anchor if you want to parent several objects
 or read its world transform. Anchors are hidden while the hand is not tracked.
-For alignment debugging, add `?debughands` to the page URL. It draws the detected
-hand skeleton over the video and shows projected 3D joint markers.
+For alignment debugging, add `?debughandtracking` to the page URL (`?debughands`
+is also supported). It draws the detected hand skeleton and projected joint
+markers. The repository web demo additionally loads a diagnostic panel with
+16 orientation markers per hand, finger selection, and JSON capture. See the
+[demo and replay guide](https://github.com/needle-engine/facefilter#debug-hand-tracking).
 Joint local +Z follows the finger and local +Y faces the palm side.
+
+Attach between joints with `hand.attachToHand(object, { p0: "ring_finger_mcp",
+p1: "ring_finger_pip", t01: .3 })`. Here `t01` interpolates from the first joint
+to the second. Scale and rotate the model locally to fit the anchor axes. The
+repository demo uses this API for a ring on either hand.
 
 The 3D camera distance is estimated from the hand model; a single camera cannot
 measure exact physical distance.
@@ -140,9 +151,9 @@ onStart(context => {
 
 ```ts
 import { onStart } from '@needle-tools/engine';
-import { FaceMeshTexture, NeedleTrackingManager } from '@needle-tools/facefilter';
+import { FaceFilterRoot, NeedleTrackingManager } from '@needle-tools/facefilter';
 
-onStart(context => {
+onStart(async context => {
   const scene = context.scene;
 
   // Create a face filter tracking manager and add it to the scene
