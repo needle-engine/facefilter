@@ -1,14 +1,19 @@
+import { HandCameraCalibration } from "./hands/HandCameraCalibration.js";
+import { HandLandmarkFilter } from "./hands/HandLandmarkFilter.js";
+import { HandRotationFilter, type HandRotationFilterOptions } from "./hands/HandRotationFilter.js";
+import { HandPoseStabilizer } from "./hands/HandPoseStabilizer.js";
+import { HandAttachmentFit, type HandAttachmentAutoFit } from "./hands/HandAttachmentFit.js";
 import { Application, AssetReference, Behaviour, ClearFlags, GameObject, getIconElement, getParam, getTempVector, Gizmos, instantiate, isDevEnvironment, isMobileDevice, Mathf, ObjectUtils, PromiseAllWithErrors, serializable, setParamWithoutReload, showBalloonMessage, showBalloonWarning, Vec3 } from '@needle-tools/engine';
 import { FaceLandmarker, DrawingUtils, FaceLandmarkerResult, PoseLandmarker, PoseLandmarkerResult, ImageSegmenter, ImageSegmenterResult, Matrix, HandLandmarker, HandLandmarkerResult } from "@mediapipe/tasks-vision";
 import { BlendshapeName, FacefilterUtils, MediapipeHelper } from './utils.js';
-import { Matrix4, MeshBasicMaterial, MeshStandardMaterial, Object3D, PerspectiveCamera, Quaternion, Texture, Vector3, Vector3Like } from 'three';
+import { Camera as ThreeCamera, OrthographicCamera, Matrix4, MeshBasicMaterial, MeshStandardMaterial, Object3D, PerspectiveCamera, Quaternion, Texture, Vector3, Vector3Like } from 'three';
 import { NeedleRecordingHelper } from './RecordingHelper.js';
 import { FaceFilterRoot, FilterBehaviour } from './Behaviours.js';
 import { mirror } from './settings.js';
 import { VideoRenderer } from './VideoRenderer.js';
 import { HandTrackingBehaviour } from './hands/HandTrackingBehaviour.js';
 import { buildFingerBasis } from './hands/FingerPose.js';
-import { estimateHandDepth, HandScaleReference, projectHandLandmark, cameraPalmNormal } from './hands/HandPose.js';
+import { projectImageHandLandmark, measurePalmSize, estimateHandProjection, HandScaleReference, projectHandLandmark, cameraPalmNormal, getHandProjectionIssue } from './hands/HandPose.js';
 
 const debugHands = getParam("debughandtracking") === true || getParam("debughands") === true;
 const debug = getParam("debugfilter") === true || debugHands;
@@ -22,6 +27,84 @@ export class NeedleTrackingManager extends Behaviour {
 
     static get instance() { return this._instance; }
     private static _instance: NeedleTrackingManager | null = null;
+
+    /** Auto uses image-space rendering in hand-only scenes. Perspective keeps
+     * scene-camera integration for applications with calibrated 3D content.
+     */
+    handProjection: "auto" | "perspective" = "auto";
+    private _handImageCamera: OrthographicCamera | null = null;
+    private _handImageSource: ThreeCamera | null = null;
+    get usesImageHandProjection(): boolean { return this.context.mainCamera === this._handImageCamera; }
+
+    private restoreHandCamera(): void {
+        if (this._handImageSource && this.usesImageHandProjection) {
+            this.context.mainCamera = this._handImageSource;
+            for (const hand of this._handsBySide.values()) hand.remove();
+        }
+        this._handImageCamera?.removeFromParent(); this._handImageSource = null;
+    }
+    private updateHandCamera(): void {
+        if (this.handProjection !== "auto" || this.maxFaces > 0 || this.maxHands <= 0) {
+            this.restoreHandCamera(); return;
+        }
+        const source = this.context.mainCamera;
+        if (source !== this._handImageCamera) {
+            this._handImageSource = source;
+            this._handImageCamera ??= new OrthographicCamera(-.5,.5,.5,-.5,.001,10);
+            this._handImageCamera.name = "Hand image projection";
+            this._handImageCamera.layers.mask = source.layers.mask;
+            source.add(this._handImageCamera);
+            this.context.mainCamera = this._handImageCamera;
+            for (const hand of this._handsBySide.values()) hand.remove();
+        }
+        const camera = this._handImageCamera!;
+        const aspect = this.context.domWidth / Math.max(1,this.context.domHeight);
+        camera.left = -aspect/2; camera.right = aspect/2;
+        camera.top = .5; camera.bottom = -.5;
+        camera.updateProjectionMatrix(); camera.updateWorldMatrix(true,false);
+    }
+
+    private _cameraVerticalFov = 63;
+    private readonly _handCameraCalibration = new HandCameraCalibration();
+    private _calibrationSource = "";
+    private _calibrationInput: object | undefined;
+    /** Current estimated vertical FOV; 63 is the fallback while collecting. */
+    get cameraVerticalFov(): number { return this._cameraVerticalFov; }
+    /** Read-only diagnostic; an estimate is not hardware camera metadata. */
+    get handCameraCalibration() { return this._handCameraCalibration.status; }
+
+    private updateHandCameraCalibration(): void {
+        // MediaPipe face metric transforms assume their original camera model.
+        // Calibrate only the hand-only pipeline (including the ring demo).
+        if (this.maxFaces > 0) {
+            if (this._cameraVerticalFov !== 63) {
+                this._cameraVerticalFov = 63;
+                for (const hand of this._handsBySide.values()) hand.remove();
+            }
+            this._handCameraCalibration.reset(); this._calibrationSource = "";
+            return;
+        }
+        if (this.maxHands <= 0) return;
+        const track = this.video.srcObject instanceof MediaStream ? this.video.srcObject.getVideoTracks()[0] : undefined;
+        const settings = track?.getSettings() as (MediaTrackSettings & { zoom?: number }) | undefined;
+        const source = `${track?.id ?? this.video.currentSrc}:${this.videoWidth}:${this.videoHeight}:${settings?.zoom ?? 1}`;
+        if (source !== this._calibrationSource) {
+            this._calibrationSource = source;
+            this._handCameraCalibration.reset(); this._calibrationInput = undefined;
+            this._cameraVerticalFov = 63;
+            for (const hand of this._handsBySide.values()) hand.remove();
+        }
+        const results = this._lastHandLandmarkResults;
+        const image = results?.landmarks[0], world = results?.worldLandmarks[0];
+        if (!image || !world || image === this._calibrationInput || !this.videoHeight) return;
+        this._calibrationInput = image;
+        const fov = this._handCameraCalibration.update(image, world, this.videoWidth / this.videoHeight, this.context.time.realtimeSinceStartup);
+        if (fov !== null && fov !== this._cameraVerticalFov) {
+            this._cameraVerticalFov = fov;
+            // Never blend samples expressed in different camera projections.
+            for (const hand of this._handsBySide.values()) hand.remove();
+        }
+    }
 
     /**
      * When enabled the max faces will be reduced if the performance is low
@@ -432,6 +515,7 @@ export class NeedleTrackingManager extends Behaviour {
 
     /** @internal */
     onDisable(): void {
+        this.restoreHandCamera();
         window.removeEventListener("keydown", this.onKeyDown);
         this._video?.pause();
         this._videoRenderer?.disable();
@@ -672,15 +756,15 @@ export class NeedleTrackingManager extends Behaviour {
 
     /** @internal */
     onBeforeRender(): void {
+        this.updateHandCamera();
+        if (!this.usesImageHandProjection) this.updateHandCameraCalibration();
 
-        // Currently we need to force the FOV
+        // Video rendering and hand reconstruction must use the same FOV.
         if (this.context.mainCameraComponent) {
-            this.context.mainCameraComponent.fieldOfView = 63;
+            this.context.mainCameraComponent.fieldOfView = this.cameraVerticalFov;
             this.context.mainCameraComponent.clearFlags = ClearFlags.None;
             this._videoRenderer?.onUpdate();
         }
-
-        this.updateDebugRendering();
 
         const faceResults = this._lastFaceLandmarkResults;
         if (faceResults) {
@@ -698,6 +782,7 @@ export class NeedleTrackingManager extends Behaviour {
                 hand?.render(handResults, i);
             }
         }
+        this.updateDebugRendering();
     }
 
     private _blendshapeMirrorIndexMap: Map<number, number> | null = null;
@@ -786,7 +871,8 @@ export class NeedleTrackingManager extends Behaviour {
     private onHandLandmarkerResultsUpdated(handResults: HandLandmarkerResult | null) {
         const previous = this._hands.slice();
         this._hands.length = 0;
-        if (handResults && this.context.mainCamera instanceof PerspectiveCamera) {
+        // Detection identity is independent of the camera projection.
+        if (handResults) {
             for (let i = 0; i < handResults.landmarks.length; i++) {
                 const label = handResults.handedness[i]?.[0]?.categoryName;
                 const key = label === "Left" || label === "Right" ? label : `hand:${i}`;
@@ -859,6 +945,11 @@ export class NeedleTrackingManager extends Behaviour {
         }
     }
 
+
+    /** Show hand landmark lines and joint spheres when debugging is enabled. */
+    showHandDebugOverlays = true;
+    /** Shared One Euro pose settings: Hz, velocity gain (metres/second), Hz. */
+    readonly handLandmarkSmoothing = { minCutoff: 1, beta: 25, derivativeCutoff: 1 };
 
     private _debug = getParam("debugfacefilter") === true || debugHands;
     private _debugDrawing: DrawingUtils | null = null;
@@ -949,7 +1040,19 @@ export class NeedleTrackingManager extends Behaviour {
         this._lastFaceLandmarkResults?.faceLandmarks?.forEach((landmarks) => {
             this._debugDrawing?.drawConnectors(landmarks, FaceLandmarker.FACE_LANDMARKS_CONTOURS, { color: "#55FF44", lineWidth: 1 });
         });
-        this._lastHandLandmarkResults?.landmarks?.forEach((landmarks) => {
+        const camera = this.context.mainCamera;
+        const handOverlays = this.showHandDebugOverlays && (camera instanceof PerspectiveCamera || camera instanceof OrthographicCamera)
+            ? this._hands.filter(hand => hand.isTracked).map(hand => {
+                const tangent = camera instanceof PerspectiveCamera ? Math.tan(camera.fov * Math.PI / 360) : 0;
+                const aspect = this.videoWidth / this.videoHeight;
+                return Array.from({ length: 21 }, (_, i) => {
+                    const point = hand.getJointPosition(i, _handPoint)!;
+                    const height = camera instanceof OrthographicCamera ? camera.top-camera.bottom : -point.z * tangent * 2;
+                    return { x: .5 + point.x / (height * aspect) * (mirror ? -1 : 1),
+                        y: .5 - point.y / height, z: 0, visibility: 1 };
+                });
+            }) : [];
+        handOverlays.forEach((landmarks) => {
             this._debugDrawing?.drawConnectors(landmarks, HandLandmarker.HAND_CONNECTIONS, { color: "#55FF44", lineWidth: 1 });
         });
 
@@ -957,7 +1060,7 @@ export class NeedleTrackingManager extends Behaviour {
         this._lastPoseLandmarkResults?.landmarks.forEach((landmarks) => {
             this._debugDrawing?.drawLandmarks(landmarks, { color: "#FF44FF", lineWidth: 1 });
         });
-        this._lastHandLandmarkResults?.landmarks.forEach((landmarks) => {
+        handOverlays.forEach((landmarks) => {
             this._debugDrawing?.drawLandmarks(landmarks, { color: "#FF44FF", lineWidth: 1, radius: debugHands ? 2 : 6 });
         });
         // this._lastPoseLandmarkResults?.segmentationMasks?.forEach((mask) => {
@@ -1128,17 +1231,25 @@ export class FaceInstance implements ITrackingInstance {
 }
 
 /** Joint name or interpolated position between two hand joints. */
-type HandAttachmentPoint = MediapipeHelper.HandKeypointName | {
+export type HandAttachmentPoint = MediapipeHelper.HandKeypointName | {
     p0: MediapipeHelper.HandKeypointName,
     p1: MediapipeHelper.HandKeypointName,
     t01: number,
 };
-type HandAttachmentOption = { offset?: Vector3Like };
+export type HandAttachmentOption = {
+    offset?: Vector3Like;
+    autoFit?: false | HandAttachmentAutoFit;
+    /** Rotation damping in seconds. Default 0; try 0.12 for jewelry. */
+    rotationSmoothing?: number;
+    /** Optional One Euro tuning when rotation smoothing is enabled. */
+    rotationFilter?: HandRotationFilterOptions;
+};
 
 const _handPoint = new Vector3();
 const _handOtherPoint = new Vector3();
 const _handSide = new Vector3();
 const _handReferenceForward = new Vector3();
+const _handPalmForward = new Vector3();
 const _handForward = new Vector3();
 const _handNormal = new Vector3();
 const _handRight = new Vector3();
@@ -1167,8 +1278,29 @@ export class HandInstance implements ITrackingInstance {
     private _imageLandmarks: readonly { x: number; y: number; z: number }[] = [];
     private _worldLandmarks: readonly { x: number; y: number; z: number }[] = [];
     private readonly _cameraLandmarks: Vector3[] = [];
-    private readonly _anchors = new Map<string, { point: HandAttachmentPoint, object: Object3D }>();
+    private readonly _rawCameraLandmarks: Vector3[] = [];
+    private readonly _poseStabilizer = new HandPoseStabilizer();
+    private readonly _landmarkFilter = new HandLandmarkFilter();
+    private _lastPoseImage: unknown;
+    private _measurementTime = 0;
+    private _rawEstimatedDepth: number | null = null;
+    private _renderScale = 1;
+    private _inputRenderScale = 1;
+    /** Snapshot of raw and rendered poses for recording/replay. */
+    get trackingDiagnostics() {
+        return {
+            measurementTime: this._measurementTime,
+            rawEstimatedDepth: this._rawEstimatedDepth,
+            state: this._poseStabilizer.state,
+            reason: this._poseStabilizer.reason,
+            rawCameraLandmarks: this._rawCameraLandmarks.map(p => p.toArray().map(v => v * this._inputRenderScale)),
+            renderScale: this._renderScale,
+            cameraLandmarks: this._cameraLandmarks.map(p => p.toArray()),
+        };
+    }
+    private readonly _anchors = new Map<string, { point: HandAttachmentPoint, object: Object3D, rotationFilter?: HandRotationFilter, rotationSmoothing?: number, rotationOptions?: HandRotationFilterOptions }>();
     private readonly _behaviours: HandTrackingBehaviour[] = [];
+    private readonly _attachmentFits = new Map<Object3D, HandAttachmentFit>();
     private readonly _debugObjects: Object3D[] = [];
 
     addBehaviour(behaviour: HandTrackingBehaviour): void {
@@ -1196,8 +1328,30 @@ export class HandInstance implements ITrackingInstance {
 
     /** Attach an object to a joint. The package handles position, rotation and camera parenting. */
     attachToHand(obj: Object3D, point: HandAttachmentPoint, opts: HandAttachmentOption = {}): void {
-        this.getJoint(point).add(obj);
+        const smoothKey = `attachment:${obj.uuid}`;
+        const previous = this._anchors.get(smoothKey);
+        if (previous) { previous.object.removeFromParent(); this._anchors.delete(smoothKey); }
+        if (opts.rotationSmoothing && opts.rotationSmoothing > 0) {
+            // Dedicated anchor: smoothing one attachment must not alter raw
+            // joint anchors, the skin, or another attachment at this point.
+            const object = new Object3D();
+            object.name = `Hand ${this.handedness} smoothed ${obj.name}`;
+            object.visible = false;
+            object.add(obj);
+            this._anchors.set(smoothKey, { point, object, rotationFilter: new HandRotationFilter(), rotationSmoothing: opts.rotationSmoothing, rotationOptions: opts.rotationFilter });
+        }
+        else this.getJoint(point).add(obj);
         obj.position.set(opts.offset?.x ?? 0, opts.offset?.y ?? 0, opts.offset?.z ?? 0);
+        this._attachmentFits.delete(obj);
+        if (opts.autoFit) {
+            const name = typeof point === "string" ? point : point.p0;
+            const finger = name.startsWith("pinky") ? "pinky-finger"
+                : name.startsWith("thumb") ? "thumb" : name.split("_")[0] + "-finger";
+            const segment = name.endsWith("_cmc") ? "metacarpal"
+                : name.endsWith("_pip") ? "phalanx-intermediate"
+                : name.endsWith("_dip") || name.endsWith("_ip") || name.endsWith("_tip") ? "phalanx-distal" : "phalanx-proximal";
+            this._attachmentFits.set(obj, new HandAttachmentFit(obj, opts.autoFit, finger, segment, this.getJoint(point)));
+        }
     }
 
     /** Camera-local position of a detected joint, using MediaPipe image XYZ. */
@@ -1208,39 +1362,82 @@ export class HandInstance implements ITrackingInstance {
 
     render(results: HandLandmarkerResult, index: number): void {
         const camera = this.context.mainCamera;
-        if (!(camera instanceof PerspectiveCamera)) return;
+        if (!(camera instanceof PerspectiveCamera) && !(camera instanceof OrthographicCamera)) return;
         const image = results.landmarks[index];
         if (!image) return;
         this._imageLandmarks = image;
         this._worldLandmarks = results.worldLandmarks[index] ?? [];
         this._referencePalmSize = this.manager.handScaleReference.getOrInitialize(this._worldLandmarks);
-        const estimated = estimateHandDepth(image, this._worldLandmarks,
-            this.manager.videoWidth, this.manager.videoHeight, camera.fov, this._referencePalmSize);
-        if (estimated !== null) {
-            const blend = this._depth && this._isTracked ? 1 - Math.exp(-12 * this.context.time.deltaTime) : 1;
-            this._depth += (estimated - this._depth) * blend;
+        const imageProjection = camera instanceof OrthographicCamera;
+        const aspect = this.manager.videoWidth / this.manager.videoHeight;
+        const imageSize = imageProjection ? measurePalmSize(image, aspect) : null;
+        const renderScale = imageSize && this._referencePalmSize ? imageSize / this._referencePalmSize : 1;
+        const originZ = [0,5,9,13,17].reduce((sum,i)=>sum+(image[i]?.z ?? NaN),0)/5;
+        const projection = imageProjection
+            ? (imageSize && this._referencePalmSize ? {depth: 1/renderScale, originZ} : null)
+            : estimateHandProjection(image, this._worldLandmarks,
+                this.manager.videoWidth, this.manager.videoHeight, camera.fov, this._referencePalmSize);
+        const estimated = projection?.depth ?? null;
+        const now = this.context.time.realtimeSinceStartup;
+        this._rawEstimatedDepth = estimated;
+        if (image !== this._lastPoseImage) {
+            this._lastPoseImage = image;
+            this._measurementTime = now;
+            const dt = Math.min(.1, Math.max(0, now - this._lastUpdateTime));
+            const suspectDepth = !imageProjection && !!this._depth && estimated !== null &&
+                (estimated / this._depth > 1.35 || estimated / this._depth < .7);
+            const blend = this._depth ? 1 - Math.exp(-12 * dt) : 1;
+            const proposedDepth = estimated !== null ? this._depth + (estimated - this._depth) * blend : this._depth;
+            if (!proposedDepth) return;
+            let projectionIssue: string | undefined;
+            this._inputRenderScale = imageProjection ? renderScale : 1;
+            for (let joint = 0; joint < image.length; joint++) {
+                const target = this._rawCameraLandmarks[joint] ??= new Vector3();
+                if (imageProjection) {
+                    projectImageHandLandmark(image[joint],originZ,aspect,mirror,target);
+                    if (target.z >= -camera.near || target.z <= -camera.far) projectionIssue = "invalid image depth";
+                    // Stabilization operates at a consistent anatomical scale;
+                    // image growth is applied once after filtering.
+                    target.multiplyScalar(1/renderScale);
+                }
+                else projectHandLandmark(image[joint], projection?.originZ ?? image[0].z, proposedDepth,
+                    aspect, camera.fov, mirror, target);
+            }
+            this._rawCameraLandmarks.length = image.length;
+            if (!projection) projectionIssue = "invalid hand projection";
+            else if (!imageProjection) projectionIssue = getHandProjectionIssue(image,this._rawCameraLandmarks,proposedDepth,camera.near,true);
+            const valid = this._poseStabilizer.update(this._rawCameraLandmarks, now, suspectDepth, projectionIssue);
+            if (this._poseStabilizer.state === "measured") this._depth = proposedDepth;
+            this._lastUpdateTime = now;
+            if (valid) {
+                const filtered = this._landmarkFilter.update(this._poseStabilizer.output, now, this.manager.handLandmarkSmoothing);
+                const filteredPalmDepth = -[0,5,9,13,17].reduce((sum,i)=>sum+filtered[i].z,0)/5;
+                this._renderScale = imageProjection && filteredPalmDepth > 1e-6 ? 1/filteredPalmDepth : 1;
+                for (let i = 0; i < 21; i++) (this._cameraLandmarks[i] ??= new Vector3()).copy(filtered[i]).multiplyScalar(this._renderScale);
+                this._cameraLandmarks.length = 21;
+            }
         }
-        if (!this._depth) return;
+        if (this._poseStabilizer.state === "lost") {
+            this._landmarkFilter.reset();
+            this._isTracked = false;
+            for (const { object, rotationFilter } of this._anchors.values()) { object.visible = false; rotationFilter?.reset(); }
+            for (const object of this._debugObjects) object.visible = false;
+            for (const behaviour of this._behaviours) behaviour.onHandTrackingLost();
+            return;
+        }
         this._isTracked = true;
         this._handIndex = index;
-        this._lastUpdateTime = this.context.time.realtimeSinceStartup;
-
-        for (let joint = 0; joint < image.length; joint++) {
-            const target = this._cameraLandmarks[joint] ??= new Vector3();
-            projectHandLandmark(image[joint], image[0].z, this._depth,
-                this.manager.videoWidth / this.manager.videoHeight, camera.fov, mirror, target);
-        }
-        this._cameraLandmarks.length = image.length;
         cameraPalmNormal(this._cameraLandmarks, this.handedness, _handNormal);
         // Reflection reverses the winding used to calculate a surface normal.
         if (!mirror) _handNormal.negate();
         _handNormal.normalize();
+        _handPalmForward.subVectors(this._cameraLandmarks[9], this._cameraLandmarks[0]).normalize();
         const indexKnuckle = this._cameraLandmarks[5];
         const pinkyKnuckle = this._cameraLandmarks[17];
         _handSide.set(0, 0, 0);
         if (indexKnuckle && pinkyKnuckle) _handSide.subVectors(indexKnuckle, pinkyKnuckle);
 
-        for (const { point, object } of this._anchors.values()) {
+        for (const { point, object, rotationFilter, rotationSmoothing, rotationOptions } of this._anchors.values()) {
             const from = typeof point === "string" ? point : point.p0;
             const fromIndex = MediapipeHelper.getJointIndex(from);
             if (!this.getJointPosition(fromIndex, _handPoint)) continue;
@@ -1252,6 +1449,7 @@ export class HandInstance implements ITrackingInstance {
             if (object.parent !== camera) camera.add(object);
             object.visible = true;
             object.position.copy(_handPoint);
+            object.scale.setScalar(this._renderScale);
 
             const previousIndex = MediapipeHelper.getPreviousJointIndex(from);
             const directionIndex = typeof point === "string" ? fromIndex : MediapipeHelper.getJointIndex(point.p1);
@@ -1276,24 +1474,38 @@ export class HandInstance implements ITrackingInstance {
             if (startIndex !== 0 && base && next)
                 _handReferenceForward.subVectors(next, base).normalize();
             if (!buildFingerBasis(_handForward, _handSide, _handNormal,
-                _handReferenceForward, _handRight, _handUp)) continue;
+                _handReferenceForward, _handRight, _handUp, _handPalmForward)) continue;
             _handRotationMatrix.makeBasis(_handRight, _handUp, _handForward);
             _handRotation.setFromRotationMatrix(_handRotationMatrix);
 
-            object.quaternion.copy(_handRotation);
+            object.quaternion.copy(rotationFilter
+                ? rotationFilter.update(_handRotation, this.context.time.deltaTime, rotationSmoothing!, this._measurementTime, rotationOptions)
+                : _handRotation);
         }
-        if (debug) this.renderDebug(camera);
+        if (debug && this.manager.showHandDebugOverlays) this.renderDebug(camera);
+        else for (const object of this._debugObjects) object.visible = false;
         for (const behaviour of this._behaviours) {
             if (behaviour.activeAndEnabled) behaviour.onUpdateHandTracking(this, results, index, this._depth);
+        }
+        if (this._attachmentFits.size) {
+            const meshes = this._behaviours.filter(b => b.activeAndEnabled).flatMap(b => b.skinnedMeshes);
+            for (const [object, fit] of this._attachmentFits) {
+                if (object.parent && [...this._anchors.values()].some(a => a.object === object.parent)) fit.update(meshes, this.context.time.deltaTime);
+                else this._attachmentFits.delete(object);
+            }
         }
     }
 
     remove(): void {
+        this._poseStabilizer.reset();
+        this._landmarkFilter.reset();
+        this._lastPoseImage = undefined;
+        this._depth = 0;
         this._isTracked = false;
         this._handIndex = -1;
-        for (const { object } of this._anchors.values()) object.visible = false;
+        for (const { object, rotationFilter } of this._anchors.values()) { object.visible = false; rotationFilter?.reset(); }
         for (const object of this._debugObjects) object.visible = false;
-        for (const behaviour of this._behaviours) behaviour.gameObject.visible = false;
+        for (const behaviour of this._behaviours) behaviour.onHandTrackingLost();
     }
 
     dispose(): void {
@@ -1301,11 +1513,12 @@ export class HandInstance implements ITrackingInstance {
         for (const { object } of this._anchors.values()) object.removeFromParent();
         for (const object of this._debugObjects) object.removeFromParent();
         this._anchors.clear();
+        this._attachmentFits.clear();
         this._debugObjects.length = 0;
         this._behaviours.length = 0;
     }
 
-    private renderDebug(camera: PerspectiveCamera): void {
+    private renderDebug(camera: ThreeCamera): void {
         for (let i = 0; i < this._imageLandmarks.length; i++) {
             let object = this._debugObjects[i];
             if (!object) {

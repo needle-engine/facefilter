@@ -3,6 +3,9 @@ import type { NeedleTrackingManager } from "@needle-tools/facefilter";
 import { cameraPalmNormal, worldPalmNormal } from "../../../../package/src/hands/HandPose.js";
 import { BoxGeometry, CanvasTexture, ConeGeometry, EdgesGeometry, Group, LineBasicMaterial, LineSegments, Mesh, MeshBasicMaterial, Quaternion, Sprite, SpriteMaterial, Vector3 } from "three";
 
+import type { addDemoRings } from "./ringDemo.js";
+import type { addHandMeshes, HandMeshMode } from "./handMeshDemo.js";
+
 // Demo-only diagnostics. Loaded on demand by ?debughandtracking.
 function createFingerMarker(color = 0x30394d, name = ""): Group {
     const marker = new Group();
@@ -58,10 +61,19 @@ function createFingerMarker(color = 0x30394d, name = ""): Group {
         label.renderOrder = 1001;
         marker.add(label);
     }
+    // These markers diagnose orientation, so do not let the invisible hand
+    // occluder cut holes through their faces or outlines.
+    marker.traverse(object => {
+        const drawable = object as Mesh;
+        if (!drawable.material) return;
+        const materials = Array.isArray(drawable.material) ? drawable.material : [drawable.material];
+        for (const material of materials) { material.depthTest = false; material.depthWrite = false; }
+        drawable.renderOrder = object.name === "debug-label" ? 1002 : 1001;
+    });
     return marker;
 }
 
-export function setupHandTrackingDebug(context: Context, manager: NeedleTrackingManager) {
+export function setupHandTrackingDebug(context: Context, manager: NeedleTrackingManager, handMesh?: Awaited<ReturnType<typeof addHandMeshes>>, ringDemo?: Awaited<ReturnType<typeof addDemoRings>>) {
     const markers: Array<{ side: "Left" | "Right", marker: Group }> = [];
     const debugMarkers: Array<{ side: "Left" | "Right", group: string, name: string, marker: Group }> = [];
     const fingers = [
@@ -95,17 +107,112 @@ export function setupHandTrackingDebug(context: Context, manager: NeedleTracking
     const title = document.createElement("strong");
     title.textContent = "Hand orientation | 16 markers per hand";
     panel.appendChild(title);
+    const fovStatus = document.createElement("div");
+    panel.appendChild(fovStatus);
+
+    if (handMesh) {
+        const meshLabel = document.createElement("label");
+        meshLabel.textContent = "Hand mesh ";
+        const meshMode = document.createElement("select");
+        meshMode.setAttribute("aria-label", "Hand mesh rendering");
+        for (const [value, label] of [["visible", "Visible surface"], ["wireframe", "Wireframe"], ["depth", "Depth occlusion only"], ["off", "Off"]]) {
+            const option = document.createElement("option");
+            option.value = value;
+            option.textContent = label;
+            meshMode.appendChild(option);
+        }
+        meshMode.value = handMesh.mode;
+        meshMode.onchange = () => handMesh.setMode(meshMode.value as HandMeshMode);
+        meshLabel.appendChild(meshMode);
+        panel.appendChild(meshLabel);
+        const thicknessLabel = document.createElement("label");
+        const thicknessText = document.createElement("span");
+        const thickness = document.createElement("input");
+        thickness.type = "range";
+        thickness.min = ".4";
+        thickness.max = "1.2";
+        thickness.step = ".05";
+        thickness.value = String(handMesh.thickness);
+        thickness.setAttribute("aria-label", "Hand mesh thickness");
+        const updateThickness = () => {
+            handMesh.setThickness(Number(thickness.value));
+            thicknessText.textContent = `Hand thickness: ${handMesh.thickness.toFixed(2)}x `;
+        };
+        thickness.oninput = updateThickness;
+        updateThickness();
+        thicknessLabel.append(thicknessText, thickness);
+        thicknessLabel.title = "Pad-to-back thickness for both the visible mesh and depth occlusion. 1 is original thickness.";
+        panel.appendChild(thicknessLabel);
+    }
+
+    if (ringDemo) {
+        const fitLabel = document.createElement("label");
+        const fit = document.createElement("input");
+        fit.type = "checkbox";
+        fit.checked = ringDemo.autoFit.enabled;
+        fit.onchange = () => { ringDemo.autoFit.enabled = fit.checked; };
+        fitLabel.append(fit, " Autofit ring to finger mesh");
+        panel.appendChild(fitLabel);
+        for (const setting of [
+            { key: "minCutoff" as const, label: "Rotation resting cutoff (Hz)", min: .1, max: 10,
+                hint: "Lower reduces resting jitter; higher follows small movements faster." },
+            { key: "beta" as const, label: "Rotation motion response", min: 0, max: 5,
+                hint: "Higher reduces lag during turns, but may pass more tracking noise." },
+        ]) {
+            const label = document.createElement("label");
+            const value = document.createElement("span");
+            const slider = document.createElement("input");
+            slider.type = "range"; slider.min = String(setting.min); slider.max = String(setting.max); slider.step = ".1";
+            slider.value = String(ringDemo.rotationFilter[setting.key]);
+            slider.setAttribute("aria-label", setting.label); slider.style.width = "100%";
+            const update = () => {
+                ringDemo.rotationFilter[setting.key] = Number(slider.value);
+                value.textContent = `${setting.label}: ${Number(slider.value).toFixed(1)}`;
+            };
+            slider.oninput = update; update();
+            label.title = setting.hint; label.append(value, slider); panel.appendChild(label);
+        }
+        const ringLabel = document.createElement("label");
+        const ringText = document.createElement("span");
+        const position = document.createElement("input");
+        position.type = "range";
+        position.min = "0";
+        position.max = "1";
+        position.step = ".01";
+        position.value = String(ringDemo.position);
+        position.setAttribute("aria-label", "Ring position from base knuckle to next joint");
+        position.style.width = "100%";
+        const updatePosition = () => {
+            ringDemo.setPosition(Number(position.value));
+            ringText.textContent = `Ring position: ${ringDemo.position.toFixed(2)} (base to next joint)`;
+        };
+        position.oninput = updatePosition;
+        updatePosition();
+        ringLabel.append(ringText, position);
+        panel.appendChild(ringLabel);
+    }
+
+    const overlaysLabel = document.createElement("label");
+    const showOverlays = document.createElement("input");
+    showOverlays.type = "checkbox";
+    showOverlays.checked = true;
+    overlaysLabel.append(showOverlays, " Show cubes and tracking lines");
+    panel.appendChild(overlaysLabel);
     const select = document.createElement("select");
     select.setAttribute("aria-label", "Visible hand markers");
-    for (const name of ["All", ...fingers.map(finger => finger.name), "Palm"]) {
+    for (const name of ["All", "None", ...fingers.map(finger => finger.name), "Palm"]) {
         const option = document.createElement("option");
         option.value = name;
-        option.textContent = name === "All" ? "All fingers + palm" : name;
+        option.textContent = name === "All" ? "All fingers + palm" : name === "None" ? "No orientation markers" : name;
         select.appendChild(option);
     }
-    select.onchange = () => {
-        for (const entry of debugMarkers) entry.marker.visible = select.value === "All" || entry.group === select.value;
+    const updateOverlays = () => {
+        manager.showHandDebugOverlays = showOverlays.checked;
+        for (const entry of debugMarkers)
+            entry.marker.visible = showOverlays.checked && (select.value === "All" || entry.group === select.value);
     };
+    select.onchange = updateOverlays;
+    showOverlays.onchange = updateOverlays;
     panel.appendChild(select);
     const names = document.createElement("div");
     names.textContent = "T thumb | I index | M middle | R ring | P pinky\n1 base segment | 2 middle | 3 fingertip";
@@ -144,31 +251,42 @@ export function setupHandTrackingDebug(context: Context, manager: NeedleTracking
     saveFrame.textContent = "Save hand landmarks";
     saveFrame.title = "Save one tracked frame as JSON. No camera image is included.";
     saveFrame.style.cssText = "padding:8px 12px;border:1px solid #69768a;border-radius:6px;background:#263449;color:white;font:inherit;cursor:pointer";
-    const captureFrame = () => {
+    const captureFrame = (includeMarkers = true) => {
         const camera = context.mainCamera;
         const frames = markers.flatMap(({ side }) => {
             const hand = manager.getHand(side);
-            if (!hand.isTracked) return [];
+            if (!hand.isTracked && context.time.realtimeSinceStartup - hand.trackingDiagnostics.measurementTime > .5) return [];
             // Debug-only access to the raw MediaPipe landmarks for a reproducible frame.
             const raw = hand as any;
             return [{
                 side,
+                tracking: hand.trackingDiagnostics,
+                ring: ringDemo?.getSnapshot(side),
                 imageLandmarks: raw._imageLandmarks,
                 worldLandmarks: raw._worldLandmarks,
                 estimatedDepth: raw._depth,
                 referencePalmSize: raw._referencePalmSize,
-                attachments: debugMarkers.filter(entry => entry.side === side).map(entry => ({
+                attachments: includeMarkers ? debugMarkers.filter(entry => entry.side === side).map(entry => ({
                     name: entry.name,
                     cameraPosition: entry.marker.parent?.position.toArray(),
                     cameraQuaternion: entry.marker.parent?.quaternion.toArray(),
                     markerScale: entry.marker.scale.toArray(),
-                })),
+                })) : undefined,
             }];
         });
         return {
-            poseMethod: "mediapipe-image-xyz",
+            poseMethod: manager.usesImageHandProjection ? "mediapipe-image-orthographic" : "mediapipe-image-xyz-palm-perspective",
+            handMeshThickness: handMesh?.thickness,
+            handLandmarkSmoothing: { ...manager.handLandmarkSmoothing },
+            cameraNear: "near" in camera ? camera.near : undefined,
+            ringPosition: ringDemo?.position,
+            ringAutoFit: ringDemo?.autoFit.enabled,
+            ringRotationSmoothing: ringDemo?.rotationSmoothing,
+            ringRotationFilter: ringDemo ? { type: "one-euro", ...ringDemo.rotationFilter } : undefined,
+            ringFitOptions: ringDemo ? { ...ringDemo.autoFit } : undefined,
             videoWidth: manager.videoWidth,
             videoHeight: manager.videoHeight,
+            cameraCalibration: manager.handCameraCalibration,
             verticalFov: "fov" in camera ? camera.fov : null,
             mirrored: true,
             timestamp: performance.now(),
@@ -176,7 +294,7 @@ export function setupHandTrackingDebug(context: Context, manager: NeedleTracking
         };
     };
     const download = (data: unknown, filename: string) => {
-        const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }));
+        const url = URL.createObjectURL(new Blob([JSON.stringify(data, (_key, value) => typeof value === "number" ? Math.round(value * 1e6) / 1e6 : value)], { type: "application/json" }));
         const link = document.createElement("a");
         link.href = url;
         link.download = filename;
@@ -195,26 +313,33 @@ export function setupHandTrackingDebug(context: Context, manager: NeedleTracking
     panel.appendChild(saveFrame);
     const record = document.createElement("button");
     record.textContent = "Capture 5 seconds of tracking";
-    record.title = "Saves joint positions and marker transforms only; no camera images or audio.";
+    record.title = "Saves each observed tracking result, raw and stabilized joints, and fitted ring transforms; no camera images or audio.";
     record.style.cssText = saveFrame.style.cssText;
     record.onclick = () => {
         record.disabled = true;
         const sequence: ReturnType<typeof captureFrame>[] = [];
-        let ticks = 0;
-        const timer = setInterval(() => {
-            sequence.push(captureFrame());
-            ticks++;
-            record.textContent = `Capturing... ${(5 - ticks / 10).toFixed(1)}s`;
-            if (ticks < 50) return;
-            clearInterval(timer);
+        const start = performance.now();
+        let previousKey = "";
+        const sample = () => {
+            const data = captureFrame(false);
+            const key = data.hands.map(h => `${h.side}:${h.tracking.measurementTime}:${h.ring?.visible}`).join("|");
+            if (key !== previousKey) { sequence.push(data); previousKey = key; }
+            const elapsed = performance.now() - start;
+            record.textContent = `Capturing... ${Math.max(0, 5 - elapsed / 1000).toFixed(1)}s`;
+            if (elapsed < 5000) { requestAnimationFrame(sample); return; }
             record.disabled = false;
             record.textContent = "Capture 5 seconds of tracking";
-            download({ version: 1, frames: sequence }, "facefilter-hand-sequence.json");
-        }, 100);
+            download({ version: 2, sampling: "new tracking results", frames: sequence }, "facefilter-hand-sequence.json");
+        };
+        requestAnimationFrame(sample);
     };
     panel.appendChild(record);
 
     setInterval(() => {
+        const calibration = manager.handCameraCalibration;
+        fovStatus.textContent = manager.usesImageHandProjection ? "Projection: image space (no camera calibration)" : calibration.state === "estimated"
+            ? `Camera FOV ${calibration.state}: ${manager.cameraVerticalFov.toFixed(1)} deg`
+            : `Camera FOV: waiting for reliable views (${calibration.acceptedSamples} samples; fallback ${manager.cameraVerticalFov.toFixed(0)} deg)`;
         const camera = context.mainCamera;
         camera.updateWorldMatrix(true, false);
         const readouts: string[] = [];

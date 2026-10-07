@@ -38,9 +38,13 @@ export {
     HandTrackingSkinnedMeshRenderer,
 } from "./src/hands/HandTrackingBehaviour.js";
 
+export type { HandAttachmentAutoFit } from "./src/hands/HandAttachmentFit.js";
+export type { HandAttachmentPoint, HandAttachmentOption } from "./src/TrackingManager.js";
+
 export { HandInstance } from "./src/TrackingManager.js";
 
 export {
     ShaderToyFaceFilter,
     ReadyPlayerMeFacefilterSupport as ReadyPlayerMeFaceFilter,
 } from "./src/examples/index.js"
+export type { HandRotationFilterOptions } from "./src/hands/HandRotationFilter.js";

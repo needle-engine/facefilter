@@ -4,7 +4,7 @@ import { readFile } from "node:fs/promises";
 import { pathToFileURL } from "node:url";
 import { Matrix4, Quaternion, Vector3 } from "three";
 import { buildFingerBasis } from "../src/hands/FingerPose.ts";
-import { cameraPalmNormal, estimateHandDepth, projectHandLandmark } from "../src/hands/HandPose.ts";
+import { cameraPalmNormal, projectImageHandLandmark, estimateHandDepth, estimateHandProjection, projectHandLandmark } from "../src/hands/HandPose.ts";
 
 const angle = (a, b) => Math.acos(Math.max(-1, Math.min(1, a.dot(b)))) * 180 / Math.PI;
 const segments = ["T", "I", "M", "R", "P"].flatMap((finger, index) =>
@@ -15,11 +15,18 @@ export function replayHandFrame(frame) {
     const samples = [];
     for (const hand of frame.hands) {
         const image = hand.imageLandmarks;
-        const depth = hand.estimatedDepth || estimateHandDepth(image, hand.worldLandmarks,
+        const imageProjection = frame.poseMethod === "mediapipe-image-orthographic";
+        const projection = frame.poseMethod === "mediapipe-image-xyz-palm-perspective"
+            ? estimateHandProjection(image, hand.worldLandmarks, frame.videoWidth, frame.videoHeight, frame.verticalFov, hand.referencePalmSize) : null;
+        const depth = hand.estimatedDepth || projection?.depth || estimateHandDepth(image, hand.worldLandmarks,
             frame.videoWidth, frame.videoHeight, frame.verticalFov);
         if (!depth || image.length !== 21) throw new Error(`Incomplete ${hand.side} hand frame`);
-        const points = image.map(point => projectHandLandmark(point, image[0].z, depth,
-            frame.videoWidth / frame.videoHeight, frame.verticalFov, frame.mirrored, new Vector3()));
+        const points = hand.tracking?.cameraLandmarks?.length === 21
+            ? hand.tracking.cameraLandmarks.map(point => new Vector3().fromArray(point))
+            : imageProjection ? image.map(point => projectImageHandLandmark(point,
+                [0,5,9,13,17].reduce((s,i)=>s+image[i].z,0)/5,frame.videoWidth/frame.videoHeight,frame.mirrored,new Vector3()))
+            : image.map(point => projectHandLandmark(point, projection?.originZ ?? image[0].z, depth,
+                frame.videoWidth / frame.videoHeight, frame.verticalFov, frame.mirrored, new Vector3()));
         const normal = cameraPalmNormal(points, hand.side, new Vector3()).normalize();
         if (!frame.mirrored) normal.negate();
         const side = points[5].clone().sub(points[17]);
@@ -27,15 +34,15 @@ export function replayHandFrame(frame) {
             const forward = points[end].clone().sub(points[start]).normalize();
             const reference = base === 0 ? forward : points[base + 1].clone().sub(points[base]).normalize();
             const right = new Vector3(), up = new Vector3();
-            if (!buildFingerBasis(forward, side, normal, reference, right, up)) throw new Error(`Degenerate ${name} basis`);
+            if (!buildFingerBasis(forward, side, normal, reference, right, up, points[9].clone().sub(points[0]).normalize())) throw new Error(`Degenerate ${name} basis`);
             const position = points[start].clone().add(points[end]).multiplyScalar(.5);
-            const view = position.clone().negate().normalize();
+            const view = imageProjection ? new Vector3(0,0,1) : position.clone().negate().normalize();
             const rotation = new Quaternion().setFromRotationMatrix(new Matrix4().makeBasis(right, up, forward));
             const recorded = hand.attachments?.find(marker => marker.name === name);
             let recordedTilt = null;
             if (recorded?.cameraQuaternion && recorded.cameraPosition) {
                 const recordedUp = new Vector3(0, 1, 0).applyQuaternion(new Quaternion().fromArray(recorded.cameraQuaternion));
-                const recordedView = new Vector3().fromArray(recorded.cameraPosition).negate().normalize();
+                const recordedView = imageProjection ? new Vector3(0,0,1) : new Vector3().fromArray(recorded.cameraPosition).negate().normalize();
                 recordedTilt = angle(recordedUp, recordedView);
             }
             samples.push({ name, side: hand.side, tilt: angle(up, view),

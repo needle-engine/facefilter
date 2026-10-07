@@ -1,6 +1,6 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
-import { estimateHandDepth, HandScaleReference, measurePalmSize, projectHandLandmark, cameraPalmNormal, fingerBendWeight, imageFingerDirection, worldPalmNormal } from "../../src/hands/HandPose.ts";
+import { estimateHandDepth, estimateHandProjection, HandScaleReference, measurePalmSize, projectHandLandmark, cameraPalmNormal, fingerBendWeight, imageFingerDirection, worldPalmNormal } from "../../src/hands/HandPose.ts";
 
 const width = 1280, height = 720, fov = 63;
 const focal = height / (2 * Math.tan(fov * Math.PI / 360));
@@ -137,4 +137,40 @@ test("left and right hands share one scale despite different initial world-size 
     const rightDepth = estimateHandDepth(rightImage, rightWorld, width, height, fov, rightSize);
     assert.ok(Math.abs(leftDepth - rightDepth) < 1e-8, "matching apparent hands must render identical objects at the same scale");
     assert.equal(reference.getOrInitialize([]), leftSize, "tracking loss must retain the shared reference");
+});
+
+// Generate real perspective image rays and palm-relative normalized depth from
+// one metric hand. Close/far reconstructions must preserve its physical size.
+test("palm-referenced projection reconstructs close and off-axis tilted hands", () => {
+    const metric = Array.from({length: 21}, (_, i) => ({x: ((i % 4) - 1.5) * .012, y: -.01 * i, z: 0}));
+    metric[0] = {x: 0, y: .065, z: .04};
+    metric[5] = {x: -.033, y: -.025, z: -.01};
+    metric[9] = {x: -.01, y: -.04, z: -.016};
+    metric[13] = {x: .013, y: -.034, z: -.014};
+    metric[17] = {x: .036, y: -.018, z: 0};
+    const origin = [0,5,9,13,17].reduce((s, i) => s + metric[i].z, 0) / 5;
+    const tangent = Math.tan(fov * Math.PI / 360);
+    for (const aspect of [4/3, 9/16]) for (const depth of [.12, .25, .6]) {
+        const cameraPoints = metric.map(p => ({x:p.x+.025, y:-p.y-.025, z:-(depth+p.z-origin)}));
+        const normalized = cameraPoints.map(p => ({
+            x:.5+p.x/(-p.z*2*tangent*aspect), y:.5-p.y/(-p.z*2*tangent),
+            z:((-p.z)-(-cameraPoints[0].z))/(2*depth*tangent*aspect),
+        }));
+        const fit = estimateHandProjection(normalized, metric, 1000*aspect, 1000, fov);
+        assert.ok(fit);
+        assert.ok(Math.abs(fit.depth-depth) < 1e-9);
+        normalized.forEach((p, i) => {
+            const actual = projectHandLandmark(p, fit.originZ, fit.depth, aspect, fov, false, {x:0,y:0,z:0});
+            assert.ok(Math.hypot(actual.x-cameraPoints[i].x, actual.y-cameraPoints[i].y, actual.z-cameraPoints[i].z) < 1e-9);
+        });
+        // Physical ring width relative to its placement depth must be unchanged
+        // by reconstruction, even close to the camera.
+        const ring = projectHandLandmark(normalized[13], fit.originZ, fit.depth, aspect, fov, false, {x:0,y:0,z:0});
+        assert.ok(Math.abs(.02/-ring.z - .02/-cameraPoints[13].z) < 1e-9);
+    }
+});
+test("palm projection rejects incomplete and non-finite measurements", () => {
+    assert.equal(estimateHandProjection([],world,width,height,fov),null);
+    const invalid=image.map(p=>({...p})); invalid[13].z=NaN;
+    assert.equal(estimateHandProjection(invalid,world,width,height,fov),null);
 });

@@ -1,6 +1,6 @@
 import { Context, ObjectUtils } from "@needle-tools/engine";
 import { type NeedleTrackingManager } from "./TrackingManager.js";
-import { CanvasTexture, IUniform, MeshBasicMaterial, Object3D, PerspectiveCamera, ShaderMaterial, Texture, Vector3, VideoTexture, WebGLRenderTarget } from "three";
+import { CanvasTexture, IUniform, MeshBasicMaterial, Object3D, OrthographicCamera, PerspectiveCamera, ShaderMaterial, Texture, Vector3, VideoTexture, WebGLRenderTarget } from "three";
 import { mirror } from "./settings.js";
 
 
@@ -70,7 +70,7 @@ export class VideoRenderer {
 
     onUpdate() {
 
-        if (this._videoTexture && this._videoQuad && this.context.mainCamera instanceof PerspectiveCamera) {
+        if (this._videoTexture && this._videoQuad && (this.context.mainCamera instanceof PerspectiveCamera || this.context.mainCamera instanceof OrthographicCamera)) {
             if (this._videoQuad.parent !== this.context.mainCamera) {
                 this.context.mainCamera.add(this._videoQuad);
             }
@@ -162,7 +162,9 @@ export class VideoRenderer {
             }
             this._videoQuad.scale
                 .set(aspect, -1, 1)
-                .multiplyScalar(far * Math.tan(this.context.mainCamera.fov * Math.PI / 180 / 2) * 2);
+                .multiplyScalar(this.context.mainCamera instanceof OrthographicCamera
+                    ? this.context.mainCamera.top - this.context.mainCamera.bottom
+                    : far * Math.tan(this.context.mainCamera.fov * Math.PI / 180 / 2) * 2);
             this._videoQuad.visible = this.owner.showVideo;
         }
     }

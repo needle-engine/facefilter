@@ -44,14 +44,33 @@ export function estimateHandDepth(image: readonly HandPoint[], world: readonly H
     return Number.isFinite(distance) && distance > .05 && distance < 10 ? distance : null;
 }
 
+/** Fit a perspective hand using a shared palm depth origin.
+ * The image XYZ scale describes the palm, not the farther-away wrist.
+ * Solve metric scale AFTER unprojecting the rays so an off-axis/close palm
+ * is measured in camera space instead of using weak-perspective image lengths.
+ */
+export function estimateHandProjection(image: readonly HandPoint[], world: readonly HandPoint[], videoWidth: number, videoHeight: number, verticalFovDegrees: number, referencePalmSize?: number): { depth: number; originZ: number } | null {
+    if (image.length !== 21 || videoWidth <= 0 || videoHeight <= 0 || verticalFovDegrees <= 0 || verticalFovDegrees >= 180) return null;
+    const originZ = [0, 5, 9, 13, 17].reduce((sum, i) => sum + image[i].z, 0) / 5;
+    const metricSize = referencePalmSize ?? measurePalmSize(world);
+    if (!metricSize || !Number.isFinite(originZ)) return null;
+    const aspect = videoWidth / videoHeight;
+    const projected = image.map(point => projectHandLandmark(point, originZ, 1, aspect, verticalFovDegrees, false, { x: 0, y: 0, z: 0 }));
+    if (projected.some(point => !Number.isFinite(point.z) || point.z >= 0)) return null;
+    const cameraSize = measurePalmSize(projected);
+    if (!cameraSize) return null;
+    const depth = metricSize / cameraSize;
+    return Number.isFinite(depth) && depth > .05 && depth < 10 ? { depth, originZ } : null;
+}
+
 /** Place a normalized MediaPipe XYZ landmark on its camera ray. */
-export function projectHandLandmark<T extends HandPoint>(image: HandPoint, wristImageZ: number, depth: number, videoAspect: number, verticalFovDegrees: number, mirrored: boolean, target: T): T {
+export function projectHandLandmark<T extends HandPoint>(image: HandPoint, depthOriginZ: number, depth: number, videoAspect: number, verticalFovDegrees: number, mirrored: boolean, target: T): T {
     const tangent = Math.tan(verticalFovDegrees * Math.PI / 360);
     // Image-landmark z has the same scale as normalized x (image width), not y.
-    // Convert it at the wrist plane; worldLandmarks are a separate pose estimate
+    // Convert it at the supplied reference plane; worldLandmarks are a separate pose estimate
     // and their z must not be substituted into this image-coordinate skeleton.
-    const imageWidthAtWrist = 2 * depth * tangent * videoAspect;
-    const z = -depth - (image.z - wristImageZ) * imageWidthAtWrist;
+    const imageWidthAtReference = 2 * depth * tangent * videoAspect;
+    const z = -depth - (image.z - depthOriginZ) * imageWidthAtReference;
     const halfHeight = -z * tangent;
     target.x = (image.x - .5) * 2 * halfHeight * videoAspect * (mirrored ? -1 : 1);
     target.y = (.5 - image.y) * 2 * halfHeight;
@@ -116,4 +135,28 @@ export function fingerBendWeight(base: HandPoint, middle: HandPoint, tip: HandPo
     const angle = Math.acos(cosine) * 180 / Math.PI;
     const t = Math.max(0, Math.min(1, (angle - 12) / 28));
     return t * t * (3 - 2 * t);
+}
+
+
+/** Reject depth reconstructions that would magnify attachments at/behind the
+ * camera, especially when MediaPipe is extrapolating an off-image wrist. */
+export function getHandProjectionIssue(image: readonly HandPoint[], cameraPoints: readonly HandPoint[], wristDepth: number, near: number, palmReferenced = false): string | undefined {
+    if (image.length !== 21 || cameraPoints.length !== 21) return "incomplete projection";
+    const closest = Math.min(...cameraPoints.map(p => -p.z));
+    if (!Number.isFinite(closest) || closest <= Math.max(near + .02, .03)) return "hand depth crosses camera safety margin";
+    const wrist = image[0];
+    const wristOutside = wrist.x < 0 || wrist.x > 1 || wrist.y < 0 || wrist.y > 1;
+    if (!palmReferenced && wristOutside && closest < wristDepth * .5) return "off-frame wrist with unstable relative depth";
+    return undefined;
+}
+
+/** Calibration-free overlay coordinates. Image height is one camera unit.
+ * Relative image Z orders surfaces; it is not interpreted as camera distance.
+ * Uniform image growth/translation therefore cannot change the hand's pose.
+ */
+export function projectImageHandLandmark<T extends HandPoint>(image: HandPoint, originZ: number, videoAspect: number, mirrored: boolean, target: T): T {
+    target.x = (image.x - .5) * videoAspect * (mirrored ? -1 : 1);
+    target.y = .5 - image.y;
+    target.z = -1 - (image.z - originZ) * videoAspect;
+    return target;
 }

@@ -1,160 +1,94 @@
-import { HandLandmarkerResult } from "@mediapipe/tasks-vision";
-import { Behaviour, IComponent, serializable } from "@needle-tools/engine";
-import { Bone, Matrix4, PerspectiveCamera, SkinnedMesh, Vector3 } from "three";
+import type { HandLandmarkerResult } from "@mediapipe/tasks-vision";
+import { Behaviour, serializable } from "@needle-tools/engine";
+import { Mesh, Object3D, SkinnedMesh } from "three";
 import { NeedleTrackingManager } from "../TrackingManager.js";
 import type { HandInstance } from "../TrackingManager.js";
+import { HandSkeleton, XR_HAND_JOINTS } from "./HandSkeleton.js";
 
-interface IHandTrackingBehaviour extends Pick<IComponent, "enabled"> {
-    onUpdateHandTracking(hand: HandInstance, res: HandLandmarkerResult, index: number, baseDepth: number): void;
-}
-
+/** Drive a WebXR-named skinned hand using the same pose as hand attachments. */
 export class HandTrackingBehaviour extends Behaviour {
-
     @serializable()
     handedness: "Left" | "Right" = "Right";
+    /** Pad-to-back mesh thickness; 1 is the authored thickness. */
+    @serializable()
+    meshThickness = 1;
 
-    private readonly _handBehaviours: IHandTrackingBehaviour[] = [];
+    private _hand: HandInstance | null = null;
+    private _skin: HandTrackingSkinnedMeshRenderer | null = null;
+    private readonly _meshes: Mesh[] = [];
+
+    /** Current tracked surfaces for attachment fitting. */
+    get skinnedMeshes(): SkinnedMesh[] {
+        return this._meshes.filter(mesh => (mesh as SkinnedMesh).isSkinnedMesh) as SkinnedMesh[];
+    }
 
     awake() {
-        this._handBehaviours.push(this.gameObject.getOrAddComponent(HandTrackingSkinnedMeshRenderer));
-    }
-
-    start() {
-        NeedleTrackingManager.instance?.getHand(this.handedness).addBehaviour(this);
-    }
-
-    onDestroy() {
-        NeedleTrackingManager.instance?.getHand(this.handedness).removeBehaviour(this);
-    }
-
-    onUpdateHandTracking(hand: HandInstance, res: HandLandmarkerResult, index: number, baseDepth: number) {
-
-        this.gameObject.visible = true;
-        const camera = this.context.mainCamera;
-
-        if (this.gameObject.parent !== camera) {
-            camera.add(this.gameObject);
-        }
-
-        for (const beh of this._handBehaviours) {
-            if (beh.enabled === false) continue;
-            beh.onUpdateHandTracking(hand, res, index, baseDepth);
-        }
-    }
-
-}
-
-type BoneMapping = { bone: Bone, jointIndex: number };
-const _parentInverse = new Matrix4();
-const _localPos = new Vector3();
-
-export class HandTrackingSkinnedMeshRenderer extends Behaviour implements IHandTrackingBehaviour {
-
-    private _skinnedMesh: SkinnedMesh | null = null;
-    private _sortedBones: BoneMapping[] = [];
-
-    awake() {
-        this._skinnedMesh = null;
-        this.gameObject.traverse(o => {
-            if (this._skinnedMesh) return; // already found it
-            if (o.type === "SkinnedMesh") {
-                this._skinnedMesh = o as SkinnedMesh;
-            }
+        // Keep the component owner active: an invisible owner stops lifecycle
+        // callbacks and cannot recover when hand tracking returns.
+        this.gameObject.traverse(object => {
+            if ((object as Mesh).isMesh) this._meshes.push(object as Mesh);
         });
-        this._buildSortedBoneList();
+        this.onHandTrackingLost();
+        this._skin = this.gameObject.getOrAddComponent(HandTrackingSkinnedMeshRenderer);
     }
-
-    onEnable(): void {
-        if (this._skinnedMesh?.type !== "SkinnedMesh") {
-            console.error("HandTrackingSkinnedMeshRenderer can only be attached to SkinnedMesh objects.");
-            this.enabled = false;
-            return;
+    onEnable() {
+        this._hand = NeedleTrackingManager.instance?.getHand(this.handedness) ?? null;
+        if (this._hand) {
+            this._skin?.bindHand(this._hand);
+            this._hand.addBehaviour(this);
         }
     }
+    start() { this.onEnable(); }
+    onDisable() {
+        this._hand?.removeBehaviour(this);
+        this.onHandTrackingLost();
+    }
+    onDestroy() { this.onDisable(); }
 
-    /** Build bone list sorted by hierarchy depth (root first) for correct parent-to-child processing */
-    private _buildSortedBoneList() {
-        this._sortedBones = [];
-        if (!this._skinnedMesh) return;
-
-        const entries: (BoneMapping & { depth: number })[] = [];
-        for (const bone of this._skinnedMesh.skeleton.bones) {
-            const boneName = bone.userData?.name || bone.name;
-            const jointIndex = XRHAND_BONE_NAME_TO_MEDIAPIPE_INDEX[boneName];
-            if (jointIndex === undefined || jointIndex === -1) continue;
-            let depth = 0;
-            let p = bone.parent;
-            while (p) { depth++; p = p.parent; }
-            entries.push({ bone, jointIndex, depth });
-        }
-        entries.sort((a, b) => a.depth - b.depth);
-        this._sortedBones = entries;
+    onHandTrackingLost() {
+        for (const mesh of this._meshes) mesh.visible = false;
     }
 
-    onUpdateHandTracking(hand: HandInstance, _res: HandLandmarkerResult, _handIndex: number, _baseDepth: number): void {
+    onUpdateHandTracking(hand: HandInstance, _res: HandLandmarkerResult, _index: number, _baseDepth: number) {
         const camera = this.context.mainCamera;
-        if (!(camera instanceof PerspectiveCamera)) return;
-
-        // Joint positions are already fitted to the camera image by HandInstance.
+        if (this.gameObject.parent !== camera) camera.add(this.gameObject);
         camera.updateWorldMatrix(true, false);
-
-        // Process bones from root to leaf so parent transforms are up-to-date
-        for (const { bone, jointIndex } of this._sortedBones) {
-            if (!bone.visible) continue;
-
-            if (!hand.getJointPosition(jointIndex, _localPos)) continue;
-            // The joint is camera-local. Bone parents use world space, so pass
-            // through the camera transform before converting to parent-local.
-            _localPos.applyMatrix4(camera.matrixWorld);
-            if (bone.parent) {
-                bone.parent.updateWorldMatrix(true, false);
-                _parentInverse.copy(bone.parent.matrixWorld).invert();
-                _localPos.applyMatrix4(_parentInverse);
-            }
-            bone.position.copy(_localPos);
-        }
+        const visible = this._skin?.enabled !== false && !!this._skin?.updateHand(hand, this.meshThickness);
+        for (const mesh of this._meshes) mesh.visible = visible;
     }
 }
 
-// Single constant defining the mapping from Three.js bone name to MediaPipe index
-const XRHAND_BONE_NAME_TO_MEDIAPIPE_INDEX: { [key: string]: number } = {
-    // Wrist
-    'wrist': 0,
+export class HandTrackingSkinnedMeshRenderer extends Behaviour {
+    private readonly _skins: HandSkeleton[] = [];
+    private readonly _anchors = new Map<string, Object3D>();
+    private _hand: HandInstance | null = null;
 
-    // Thumb - Mapped to distal joint/tip or controlling joint
-    'thumb-metacarpal': 2,       // Leads TO MCP
-    'thumb-phalanx-proximal': 3, // Leads TO IP
-    'thumb-phalanx-distal': 3,   // Controlled BY IP
-    'thumb-tip': 4,              // Tip
-
-    // Index Finger
-    'index-finger-metacarpal': 5,        // Leads TO MCP
-    'index-finger-phalanx-proximal': 6,  // Leads TO PIP
-    'index-finger-phalanx-intermediate': 7, // Leads TO DIP
-    'index-finger-phalanx-distal': 7,    // Controlled BY DIP
-    'index-finger-tip': 8,               // Tip
-
-    // Middle Finger
-    'middle-finger-metacarpal': 9,        // Leads TO MCP
-    'middle-finger-phalanx-proximal': 10, // Leads TO PIP
-    'middle-finger-phalanx-intermediate': 11,// Leads TO DIP
-    'middle-finger-phalanx-distal': 11,   // Controlled BY DIP
-    'middle-finger-tip': 12,              // Tip
-
-    // Ring Finger
-    'ring-finger-metacarpal': 13,        // Leads TO MCP
-    'ring-finger-phalanx-proximal': 14, // Leads TO PIP
-    'ring-finger-phalanx-intermediate': 15,// Leads TO DIP
-    'ring-finger-phalanx-distal': 15,   // Controlled BY DIP
-    'ring-finger-tip': 16,              // Tip
-
-    // Pinky Finger
-    'pinky-finger-metacarpal': 17,        // Leads TO MCP
-    'pinky-finger-phalanx-proximal': 18, // Leads TO PIP
-    'pinky-finger-phalanx-intermediate': 19,// Leads TO DIP
-    'pinky-finger-phalanx-distal': 19,   // Controlled BY DIP
-    'pinky-finger-tip': 20               // Tip
-
-    // Note: MediaPipe index 1 (THUMB_CMC) is not directly mapped
-    // as there's no specific 'thumb-cmc' bone in the provided Three.js names.
-};
+    awake() {
+        this.gameObject.updateWorldMatrix(true, true);
+        this.gameObject.traverse(object => {
+            if ((object as SkinnedMesh).isSkinnedMesh) this._skins.push(new HandSkeleton(object as SkinnedMesh, .004, true));
+        });
+        if (!this._skins.length) {
+            console.error("HandTrackingSkinnedMeshRenderer requires a WebXR-named SkinnedMesh.");
+            this.enabled = false;
+        }
+    }
+    bindHand(hand: HandInstance) {
+        if (this._hand === hand) return;
+        this._hand = hand;
+        this._anchors.clear();
+        for (const spec of XR_HAND_JOINTS) {
+            const point = spec.name === "wrist" ? "wrist" : { p0: spec.from, p1: spec.to, t01: 0 };
+            const anchor = hand.getJoint(point as Parameters<HandInstance["getJoint"]>[0]);
+            this._anchors.set(spec.name, anchor);
+        }
+    }
+    updateHand(hand: HandInstance, thickness = 1): boolean {
+        this.bindHand(hand);
+        if (![...this._anchors.values()].every(anchor => anchor.visible)) return false;
+        return this._skins.length > 0 && this._skins.every(skin => skin.update(
+            (index, target) => hand.getJointPosition(index, target),
+            name => this._anchors.get(name)?.quaternion,
+            this.context.mainCamera.matrixWorld, thickness));
+    }
+}

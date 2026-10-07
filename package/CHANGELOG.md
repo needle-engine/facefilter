@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [2.0.0-beta.0] - 2026-10-07
+- Retarget generic WebXR hand skins to tracked landmarks with corrected joint mappings, rotations, and scale.
+- Add visible hand meshes and selectable depth-only ring occlusion to the web demo.
 - Add stable hand joints for attaching Three.js objects without camera or depth setup.
 - Improve hand alignment and recovery after tracking is briefly lost.
 - Use MediaPipe image XYZ consistently for hand positions and finger orientation.
