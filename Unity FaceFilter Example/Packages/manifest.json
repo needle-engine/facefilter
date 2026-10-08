@@ -1,6 +1,6 @@
 {
   "dependencies": {
-    "com.needle.engine-exporter": "4.11.4",
+    "com.needle.engine-exporter": "5.1.14",
     "com.needle.face-filter": "file:../Needle/WebProject/node_modules/@needle-tools/facefilter/unity",
     "com.unity.cloud.draco": "5.1.8",
     "com.unity.cloud.ktx": "3.4.5",

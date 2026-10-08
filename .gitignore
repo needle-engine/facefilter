@@ -8,3 +8,4 @@ node_modules
 **/*.sln
 .idea
 .DS_Store
+Unity FaceFilter Example/Needle/WebProject/.agents/*
