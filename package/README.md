@@ -431,3 +431,66 @@ supplies the C# components and stable script GUIDs. Regenerating a second set in
 Assets can create invalid wrappers for runtime-only classes such as `HandInstance`
 and conflict with the supplied components. Remove unreferenced duplicate generated
 wrappers from Assets after disabling generation; retain the shipped Unity package.
+
+
+## Attach an object to a finger in Unity
+
+1. On the scene's **Tracking Manager**, set **Max Hands** to 1 or 2.
+2. Add **Needle Engine / Hand Tracking / Hand Attachment** to the object you want to track.
+3. Choose **Hand** (default **Any**), **Placement** (finger, palm, or wrist), and a segment for finger placement. **Position Along Segment** runs from the first joint (0) to the next (1). For a ring, start with Ring / Base / 0.75.
+4. Rotate and scale the object to fit the hand gizmo. For placement adjustments, attach a parent object and position the model as its child. **Tracking Offset** is available under Optional Overrides.
+5. Export and open the browser. Live camera tracking runs in the browser.
+
+The component attaches its own GameObject and finds the scene manager automatically.
+**Optional Overrides** lets you select another target or manager. Tracking loss hides
+the attachment; the manager keeps it registered so it can recover. Explicitly disabling
+the component detaches the model and restores its former parent and position.
+The adapter never changes face/hand limits or camera settings. In TypeScript,
+`HandAttachment.status` reports setup errors and attachment state. To apply changed
+runtime settings, call `detach()` followed by `attach()`.
+
+Hand selection:
+
+- **Left / Right:** show only on the selected hand.
+- **Any** (default): follow one available hand, keeping it until tracking is lost before switching.
+- **Both:** original on the left and a visual clone on the right. Set Max Hands to 2 for simultaneous tracking. The copy shares asset resources; it does not duplicate component scripts.
+
+Hand attachments must not be added to the manager's face **Filters** list. The runtime
+excludes hand attachment roots from that list to prevent the face system from moving them.
+
+### Automatic hand mesh
+
+Add **Hand Mesh Tracking** to an empty object and choose the hand. It uses an existing
+WebXR-named skinned mesh if present; otherwise **Use Built-in Hand if Empty** loads the
+packaged generic GLB. The built-in model defaults to **Occlusion**, hiding objects
+behind the hand. Choose **Visible** or **Wireframe** to inspect it. Custom mesh materials
+are preserved. `modelStatus` reports loading, readiness, and errors.
+
+**Mesh Thickness** ranges from 0.1 to 2; 1 is the original thickness. It adjusts
+pad-to-back thickness independently of joint positions.
+
+**Hand Occlusion** on Hand Attachment is optional. It shares one implicit occluding
+mesh per manager/hand across all requesting attachments, or reuses an enabled explicit
+Hand Mesh Tracking component. Toggling the option or disabling/destroying attachments
+releases their requests. Only the final release removes an implicit mesh; an explicit
+tracker remains caller-owned. If that tracker is removed while requests remain, an
+implicit mesh takes over. Any/Both requests cover both hands.
+
+**Autofit Ring to Hand Mesh** is optional. Enable Hand Occlusion to supply its mesh
+automatically, or add Hand Mesh Tracking for the same hand. Orient the ring opening along Z.
+**Fit Factor** adjusts the measured fit from 0.8 to 1.2 (default 1).
+**Advanced Fit Measurements** contains automatic opening measurement (default), an
+optional explicit opening radius at the initial model scale, band half width (0?10 mm),
+and clearance (0?2 mm). The Unity adapter bounds width and clearance at runtime too.
+**Rotation Smoothing** ranges from 0 to 0.5 seconds; 0 disables smoothing.
+
+### Scene preview
+
+With Scene **Gizmos** enabled, the hand preview remains faintly visible when unselected.
+Select the component or any child for the stronger preview and placement guides. Hand Attachment displays the packaged hand around the selected
+finger/position, aligned to the accessory. Hand Mesh Tracking previews its default
+model when empty and shows bone guides for custom meshes. Solid/wireframe rendering
+matches the head gizmo. Co-located attachment and hand tracking components share the
+attachment-aligned preview, drawn once. These are authored-model placement guides, not live camera
+tracking or an estimate of the real person's finger thickness; fitting is applied
+in the browser.

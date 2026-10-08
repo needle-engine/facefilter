@@ -50,3 +50,5 @@ export {
 export type { HandRotationFilterOptions } from "./src/hands/HandRotationFilter.js";
 
 export { measureRingOpening, type RingOpeningMeasurement } from "./src/hands/RingOpening.js";
+
+export { HandAttachment } from "./src/hands/HandAttachment.js";

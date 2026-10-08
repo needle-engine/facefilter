@@ -5,6 +5,8 @@ import { Matrix4, Object3D, SkinnedMesh, Vector3 } from "three";
 export type HandAttachmentAutoFit = {
     /** Set false to restore the attachment's original position and scale. */
     enabled?: boolean;
+    /** Adjustment to the measured fit. Clamped to 0.8?1.2; default 1. */
+    fitFactor?: number;
     /** Opening radius at initial scale in anatomical metres. Omit to measure a rigid circular band aligned to Z. */
     innerRadius?: number;
     /** Surface clearance in metres. Default 0.0005 (0.5 mm). */
@@ -166,7 +168,8 @@ export class HandAttachmentFit {
             radius = Math.max(radius, Math.hypot(p.x - this.center.x, p.y - this.center.y));
         }
         const clearance = Math.max(0, this.options.clearance ?? .0005);
-        const factor = (radius + clearance) / this.innerRadius;
+        const adjustment = Number.isFinite(this.options.fitFactor) ? Math.max(.8, Math.min(1.2, this.options.fitFactor!)) : 1;
+        const factor = (radius + clearance) / this.innerRadius * adjustment;
         if (!Number.isFinite(factor) || factor <= 0 || factor > (this.options.maxScale ?? 2)) { this.hold("oversized"); return; }
         const smoothing = this.options.smoothing ?? .08;
         const blend = !this.applied || smoothing <= 0 ? 1 : 1 - Math.exp(-Math.max(0, deltaTime) / smoothing);

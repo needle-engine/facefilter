@@ -16,6 +16,7 @@ import { FaceMeshTexture } from "../src/facemesh/FaceMeshBehaviour.js";
 import { FaceMeshCustomShader } from "../src/facemesh/FaceMeshBehaviour.js";
 import { FaceMeshVideo } from "../src/facemesh/FaceMeshBehaviour.js";
 import { FaceGeometry } from "../src/facemesh/utils.facemesh.js";
+import { HandAttachment } from "../src/hands/HandAttachment.js";
 import { HandTrackingBehaviour } from "../src/hands/HandTrackingBehaviour.js";
 import { HandTrackingSkinnedMeshRenderer } from "../src/hands/HandTrackingBehaviour.js";
 
@@ -35,6 +36,7 @@ export function registerTypes() {
 	TypeStore.add("FaceMeshCustomShader", FaceMeshCustomShader);
 	TypeStore.add("FaceMeshVideo", FaceMeshVideo);
 	TypeStore.add("FaceGeometry", FaceGeometry);
+	TypeStore.add("HandAttachment", HandAttachment);
 	TypeStore.add("HandTrackingBehaviour", HandTrackingBehaviour);
 	TypeStore.add("HandTrackingSkinnedMeshRenderer", HandTrackingSkinnedMeshRenderer);
 }

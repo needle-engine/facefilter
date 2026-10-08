@@ -3,7 +3,7 @@ import { HandLandmarkFilter } from "./hands/HandLandmarkFilter.js";
 import { HandRotationFilter, type HandRotationFilterOptions } from "./hands/HandRotationFilter.js";
 import { HandPoseStabilizer } from "./hands/HandPoseStabilizer.js";
 import { HandAttachmentFit, type HandAttachmentAutoFit, type HandAutoFitStatus } from "./hands/HandAttachmentFit.js";
-import { Application, AssetReference, Behaviour, ClearFlags, GameObject, getIconElement, getParam, getTempVector, Gizmos, instantiate, isDevEnvironment, isMobileDevice, Mathf, ObjectUtils, PromiseAllWithErrors, serializable, setParamWithoutReload, showBalloonMessage, showBalloonWarning, Vec3 } from '@needle-tools/engine';
+import { Application, AssetReference, Behaviour, ClearFlags, GameObject, getIconElement, getParam, getTempVector, Gizmos, instantiate, isDevEnvironment, isMobileDevice, Mathf, ObjectUtils, PromiseAllWithErrors, serializable, setParamWithoutReload, showBalloonMessage, showBalloonWarning, TypeStore, Vec3 } from '@needle-tools/engine';
 import { FaceLandmarker, DrawingUtils, FaceLandmarkerResult, PoseLandmarker, PoseLandmarkerResult, ImageSegmenter, ImageSegmenterResult, Matrix, HandLandmarker, HandLandmarkerResult } from "@mediapipe/tasks-vision";
 import { BlendshapeName, FacefilterUtils, MediapipeHelper } from './utils.js';
 import { Camera as ThreeCamera, OrthographicCamera, Matrix4, MeshBasicMaterial, MeshStandardMaterial, Object3D, PerspectiveCamera, Quaternion, Texture, Vector3, Vector3Like } from 'three';
@@ -19,6 +19,11 @@ const debugHands = getParam("debughandtracking") === true || getParam("debughand
 const debug = getParam("debugfilter") === true || debugHands;
 
 declare type VideoClip = string;
+
+function isHandAttachmentRoot(object: Object3D): boolean {
+    const type = TypeStore.get("HandAttachment");
+    return !!type && !!object.getComponent(type);
+}
 
 /**
  * Track faces and hands. See handProjection before integrating an existing scene camera.
@@ -44,6 +49,12 @@ export class NeedleTrackingManager extends Behaviour {
             ownsCamera: this.usesImageHandProjection,
             trackedHands: this._hands.filter(hand => hand.isTracked).length,
         };
+    }
+    private readonly _handAttachmentUpdates = new Set<() => void>();
+    /** @internal Runs even when an attachment's tracking anchor hides its component. */
+    addHandAttachmentUpdate(listener: () => void): () => void {
+        this._handAttachmentUpdates.add(listener);
+        return () => this._handAttachmentUpdates.delete(listener);
     }
     private _handTrackingError: string | null = null;
     private _handImageCamera: OrthographicCamera | null = null;
@@ -491,6 +502,11 @@ export class NeedleTrackingManager extends Behaviour {
                 this.filters.splice(i, 1);
                 continue;
             }
+            if (filter.asset && isHandAttachmentRoot(filter.asset)) {
+                console.warn("Hand Attachment removed from face Filters. It tracks hands independently.");
+                this.filters.splice(i, 1);
+                continue;
+            }
             if (filter.asset) {
                 filter.asset.visible = false;
             }
@@ -811,6 +827,7 @@ export class NeedleTrackingManager extends Behaviour {
                 hand?.render(handResults, i);
             }
         }
+        for (const update of this._handAttachmentUpdates) update();
         this.updateDebugRendering();
     }
 
@@ -1179,6 +1196,7 @@ export class FaceInstance implements ITrackingInstance {
             active.loadAssetAsync();
         }
         else if (active?.asset) {
+            if (isHandAttachmentRoot(active.asset)) return;
             // Check if the active filter is still the one that *should* be active/visible
             if (active !== this._filter) {
                 GameObject.remove(this._instance);

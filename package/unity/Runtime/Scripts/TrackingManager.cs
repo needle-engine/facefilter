@@ -25,7 +25,7 @@ namespace Needle.Typescript.GeneratedComponents
 				{
 					Utils.CreateNewFilterAsset(self);
 				}
-				UnityEditor.EditorGUILayout.HelpBox("Then add your filter to the \"Filters\" list below", UnityEditor.MessageType.None);
+				UnityEditor.EditorGUILayout.HelpBox("Then add your face filter to the \"Filters\" list below. Hand Attachment objects work independently: leave them out of this list and enable Max Hands.", UnityEditor.MessageType.None);
 
 				if (self.maxFaces > 1)
 				{

@@ -2,7 +2,7 @@ import {test} from "vitest";
 import {strict as assert} from "node:assert";
 import {readFile} from "node:fs/promises";
 
-import {NeedleTrackingManager,HandTrackingBehaviour,HandTrackingSkinnedMeshRenderer,THREE} from "../helpers/hand-runtime.mjs";
+import {NeedleTrackingManager,HandAttachment,FaceInstance,HandTrackingBehaviour,HandTrackingSkinnedMeshRenderer,THREE} from "../helpers/hand-runtime.mjs";
 const {Group,OrthographicCamera,PerspectiveCamera,Scene,Vector3,Mesh,TorusGeometry}=THREE;
 const capture=JSON.parse(await readFile(new URL("../fixtures/hand-poses.json",import.meta.url),"utf8"));
 function runtime(){
@@ -15,7 +15,7 @@ function feed(manager,frame) {
  const hand=frame.hands[0];const results={landmarks:[hand.imageLandmarks],worldLandmarks:[hand.worldLandmarks],handedness:[[{categoryName:hand.side}]]};
  manager.context.time.realtimeSinceStartup+=1/30;
  manager.updateHandCamera();manager.onHandLandmarkerResultsUpdated(results);
- manager.hands[0].render(results,0);
+ manager._lastHandLandmarkResults=results;manager.updateDebugRendering=()=>{};manager.onBeforeRender();
 }
 test("actual runtime acquires recorded poses, interpolates attachments, loses and reacquires",()=>{
  const {manager}=runtime();const hand=manager.getHand("Left"),ring=new Mesh(new TorusGeometry(.01,.001));
@@ -77,4 +77,111 @@ test("detector failures are reported as errors rather than permanent loading",()
  manager._handTrackingError="detector: unavailable";
  assert.equal(manager.handTrackingStatus.detector,"error");
  manager.maxHands=0;assert.equal(manager.handTrackingStatus.detector,"disabled");
+});
+
+
+test("Unity attachment adapter preserves scene settings, recovers tracking, and restores its target",()=>{
+ const {manager}=runtime(),controller=new Group(),model=new Group();controller.add(model);model.position.set(1,2,3);
+ const attachment=new HandAttachment();attachment.manager=manager;attachment.gameObject=controller;attachment.target=model;
+ attachment.handedness="Left";attachment.start();
+ assert.equal(manager.maxFaces,0);assert.equal(manager.maxHands,2);
+ const hand=manager.getHand("Left");assert.equal(attachment.status.error,null);
+ feed(manager,structuredClone(capture.frames[0]));assert.equal(attachment.status.attachment.tracked,true);
+ manager.onHandLandmarkerResultsUpdated(null);assert.equal(attachment.status.attachment.tracked,false);assert.equal(controller.visible,true);
+ feed(manager,structuredClone(capture.frames[0]));assert.equal(attachment.status.attachment.tracked,true);
+ attachment.onDisable();assert.equal(model.parent,controller);assert.deepEqual(model.position.toArray(),[1,2,3]);assert.equal(hand._attachments.size,0);
+ attachment.onEnable();assert.equal(attachment.status.attachment.state,"attached");attachment.onDestroy();assert.equal(model.parent,controller);
+});
+
+test("Unity attachment adapter maps every finger segment and rejects an ancestor target",()=>{
+ const {manager}=runtime(),controller=new Group(),model=new Group();controller.add(model);
+ const attachment=new HandAttachment();attachment.manager=manager;attachment.gameObject=controller;attachment.target=model;
+ for(const finger of ["thumb","index","middle","ring","pinky"])for(let segment=0;segment<3;segment++){
+  attachment.finger=finger;attachment.segment=segment;attachment.attach();assert.equal(attachment.status.error,null);assert.equal(attachment.status.attachment.state,"attached");attachment.detach();
+ }
+ const parent=new Group();parent.add(controller);attachment.target=parent;attachment.attach();assert.match(attachment.status.error,/ancestor/);assert.equal(controller.parent,parent);
+});
+
+
+test("self attachment finds its manager and survives visibility-driven disable callbacks",()=>{
+ const {manager}=runtime(),parent=new Group(),object=new Group();parent.add(object);
+ manager.context.scene.getComponentsInChildren=()=>[manager];
+ const attachment=new HandAttachment();attachment.context=manager.context;attachment.gameObject=object;attachment.enabled=true;attachment.handedness="Left";
+ attachment.start();assert.equal(attachment.status.error,null);assert.equal(attachment.status.attachment.state,"attached");
+ attachment.onDisable();assert.equal(attachment.status.attachment.state,"attached");
+ feed(manager,structuredClone(capture.frames[0]));attachment.onEnable();assert.equal(attachment.status.attachment.tracked,true);
+ manager.onHandLandmarkerResultsUpdated(null);attachment.onDisable();assert.equal(attachment.status.attachment.state,"attached");
+ feed(manager,structuredClone(capture.frames[0]));assert.equal(attachment.status.attachment.tracked,true);
+ attachment.enabled=false;attachment.onDisable();assert.equal(object.parent,parent);assert.equal(attachment.status.attachment,null);
+});
+
+test("empty hand component loads the packaged mirrored model and ignores a late load after destruction",async()=>{
+ const {GLTFLoader}=await import("three/examples/jsm/loaders/GLTFLoader.js");
+ const bytes=await readFile(new URL("../../unity/Runtime/Models/right.glb",import.meta.url));
+ const load=()=>new GLTFLoader().parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),"");
+ const {scene:model}=await load(),{manager}=runtime(),root=new Group();
+ const skin=new HandTrackingSkinnedMeshRenderer();skin.gameObject=model;skin.context=manager.context;
+ model.getOrAddComponent=()=>{skin.awake();return skin;};
+ const controller=new HandTrackingBehaviour();controller.context=manager.context;controller.gameObject=root;controller.handedness="Left";
+ globalThis.__facefilterLoadModel=async url=>{assert.ok(url.endsWith("/right.glb"));return model;};
+ try {
+  controller.awake();assert.equal(controller.modelStatus.state,"loading");await controller._loading;
+  assert.equal(controller.modelStatus.state,"ready");assert.ok(controller.skinnedMeshes.length>0);
+  assert.equal(model.parent,manager.context.mainCamera);assert.equal(root.parent,null,"Loading a hand must not reparent an accessory's owner");
+  controller._skin.updateHand=()=>true;controller.onUpdateHandTracking(manager.getHand("Left"));assert.equal(root.parent,null);controller.onHandTrackingLost();
+  assert.ok(controller.skinnedMeshes.every(mesh=>!mesh.visible&&!mesh.material.colorWrite));
+  controller.onDestroy();assert.equal(model.parent,null);
+  let resolve;globalThis.__facefilterLoadModel=()=>new Promise(r=>resolve=r);
+  const late=new HandTrackingBehaviour();late.gameObject=new Group();late.context=manager.context;late.awake();late.onDestroy();
+  const {scene:lateModel}=await load();resolve(lateModel);await late._loading;assert.equal(lateModel.parent,null);assert.equal(late.gameObject.children.length,0);
+ } finally {delete globalThis.__facefilterLoadModel;}
+});
+
+
+test("Any hand switches only after loss and Both creates two independently tracked visuals",()=>{
+ const {manager}=runtime(),root=new Group(),object=new Group();root.add(object);
+ const attachment=new HandAttachment();attachment.manager=manager;attachment.gameObject=object;attachment.enabled=true;attachment.handedness="Any";
+ attachment.start();const right=structuredClone(capture.frames[0]);right.hands[0].side="Right";
+ feed(manager,right);feed(manager,right);assert.equal(attachment.status.hand,"Right");assert.equal(attachment.status.attachment.tracked,true);
+ attachment.onDisable();assert.equal(attachment.status.attachment,null); // Explicit callback while the anchor is visible.
+ attachment.handedness="Both";attachment.attach();assert.ok(attachment._copy);assert.notEqual(attachment._copy,object);
+ assert.equal(manager.getHand("Left")._attachments.size,1);assert.equal(manager.getHand("Right")._attachments.size,1);
+ feed(manager,right);assert.equal(attachment.status.attachment.tracked,false);assert.equal(attachment.status.secondAttachment.tracked,true);
+ attachment.onDisable();assert.ok(attachment._copy,"Hidden left owner must retain the right copy");
+ const copy=attachment._copy;attachment.onDestroy();assert.equal(copy.parent,null);assert.equal(object.parent,root);assert.equal(manager._handAttachmentUpdates.size,0);
+});
+
+test("palm and wrist placement use hand anchors without finger autofit",()=>{
+ const {manager}=runtime();
+ for(const placement of ["palm","wrist"]){
+  const attachment=new HandAttachment();attachment.manager=manager;attachment.gameObject=new Group();attachment.finger=placement;attachment.autoFit=true;
+  attachment.attach();assert.equal(attachment.status.error,null);assert.equal(attachment.status.attachment.autoFit,null);attachment.detach();
+ }
+});
+
+test("a Hand Attachment in face Filters is excluded without hiding or converting its root",()=>{
+ const {manager}=runtime(),object=new Group();object.getComponent=type=>type===HandAttachment?{}:null;
+ manager.filters=[{asset:object}];const oldWindow=globalThis.window;globalThis.window={addEventListener(){}};
+ try {manager.onEnable();} finally {globalThis.window=oldWindow;}
+ assert.equal(manager.filters.length,0);assert.equal(object.visible,true);
+ object.getOrAddComponent=()=>{throw new Error("Must not create FaceFilterRoot for a hand attachment");};
+ const face=new FaceInstance(manager);face.update({asset:object},0,1);assert.equal(object.parent,null);
+});
+
+
+test("runtime occlusion toggles share models and removal preserves another requester",()=>{
+ const {manager}=runtime(),previous=THREE.Object3D.prototype.addComponent;
+ let created=0,removed=0;
+ THREE.Object3D.prototype.addComponent=function(type,options){
+  assert.equal(type,HandTrackingBehaviour);assert.equal(options.implicitOcclusion,true);created++;
+  return {onDestroy(){removed++;}};
+ };
+ const a=new HandAttachment(),b=new HandAttachment();
+ for(const attachment of [a,b]){attachment.manager=manager;attachment.gameObject=new Group();attachment.handedness="Right";attachment.attach();}
+ try {
+  a.handOcclusion=true;b.handOcclusion=true;assert.equal(created,1);
+  a.handOcclusion=false;assert.equal(removed,0);
+  a.handOcclusion=true;b.onDestroy();assert.equal(removed,0);
+  a.onDestroy();assert.equal(removed,1);
+ } finally {a.detach();b.detach();if(previous)THREE.Object3D.prototype.addComponent=previous;else delete THREE.Object3D.prototype.addComponent;}
 });

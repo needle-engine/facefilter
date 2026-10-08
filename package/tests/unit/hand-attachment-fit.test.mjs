@@ -120,3 +120,15 @@ test("rotation lag cannot enlarge the fitted finger cross-section", () => {
     rendered.rotation.set(0,0,0); root.updateMatrixWorld(true); fit.update([mesh]);
     assert.ok(ring.scale.distanceTo(scale) < 1e-6);
 });
+
+
+test("fit adjustment is bounded, finite, and does not compound", () => {
+    for (const [value, expected] of [[1, 1], [1.1, 1.1], [1000, 1.2], [-1000, .8], [NaN, 1], [Infinity, 1]]) {
+        const root = new Group(), anchor = new Group(), ring = new Group(), mesh = finger();
+        root.add(anchor, mesh); anchor.add(ring); root.updateMatrixWorld(true);
+        const fit = new HandAttachmentFit(ring, {innerRadius: .01, clearance: 0, smoothing: 0, fitFactor: value}, "ring-finger");
+        for (let i = 0; i < 10; i++) fit.update([mesh]);
+        assert.equal(fit.status.state, "fitted");
+        assert.ok(Math.abs(ring.scale.x - 1.15 * expected) < 1e-6);
+    }
+});

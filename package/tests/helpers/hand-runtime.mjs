@@ -3,8 +3,8 @@
 import {build} from "esbuild";
 import {readFile, readdir} from "node:fs/promises";
 import {createRequire} from "node:module";
-import {fileURLToPath} from "node:url";
-import {join} from "node:path";
+import {fileURLToPath, pathToFileURL} from "node:url";
+import {join, resolve} from "node:path";
 const root=fileURLToPath(new URL("../../",import.meta.url));
 const engineNames=new Set();
 async function scan(dir) {
@@ -19,11 +19,13 @@ async function scan(dir) {
 }
 await scan(join(root,"src"));
 engineNames.add("TypeStore");
-const special={Behaviour:"class {}",serializable:"()=>()=>{}",syncField:"()=>()=>{}",getParam:"()=>false",getTempVector:"()=>new Vector3()",
+const special={destroy:"object=>object.removeFromParent()",Application:"{registerWaitForInteraction(){}}",AssetReference:"{getOrCreateFromUrl(url){return {instantiate:()=>globalThis.__facefilterLoadModel(url)}}}",Behaviour:"class {}",serializable:"()=>()=>{}",syncField:"()=>()=>{}",getParam:"()=>false",getTempVector:"()=>new Vector3()",
  onStart:"()=>{}",TypeStore:"{types:new Map(),add(name,type){if(!this.types.has(name))this.types.set(name,type)},get(name){return this.types.get(name)}}", NEEDLE_progressive:"{assignTextureLOD(){},assignMeshLOD(){}}"};
 const engine='import {Vector3} from "three";'+[...engineNames].filter(Boolean).map(name=>`export const ${name}=${special[name]??"class {}"};`).join("\n");
-const result=await build({absWorkingDir:root,stdin:{contents:'export * from "./src/TrackingManager.ts"; export * from "./src/Behaviours.ts"; export * from "./src/hands/HandTrackingBehaviour.ts"; export * from "./src/facemesh/FaceMeshBehaviour.ts"; import "./codegen/register_types.ts"; export {TypeStore} from "@needle-tools/engine";',resolveDir:root,sourcefile:"runtime.ts"},bundle:true,format:"cjs",platform:"node",write:false,
- external:["three","three/*"],logLevel:"silent",plugins:[{name:"headless-host",setup(build){
+const result=await build({absWorkingDir:root,stdin:{contents:'export * from "./src/TrackingManager.ts"; export * from "./src/hands/HandAttachment.ts"; export * from "./src/Behaviours.ts"; export * from "./src/hands/HandTrackingBehaviour.ts"; export * from "./src/facemesh/FaceMeshBehaviour.ts"; import "./codegen/register_types.ts"; export {TypeStore} from "@needle-tools/engine";',resolveDir:root,sourcefile:"runtime.ts"},bundle:true,format:"cjs",platform:"node",write:false,
+ define:{"import.meta.url":JSON.stringify(new URL("../../src/hands/HandTrackingBehaviour.ts",import.meta.url).href)},external:["three","three/*"],logLevel:"silent",plugins:[{name:"headless-host",setup(build){
+  build.onResolve({filter:/\.glb\?url$/},args=>({path:resolve(args.resolveDir,args.path.slice(0,-4)),namespace:"asset-url"}));
+  build.onLoad({filter:/.*/,namespace:"asset-url"},args=>({contents:`export default ${JSON.stringify(pathToFileURL(args.path).href)}`,loader:"js"}));
   build.onResolve({filter:/^@needle-tools\/engine$/},()=>({path:"engine",namespace:"host"}));
   build.onResolve({filter:/^@mediapipe\/tasks-vision$/},()=>({path:"mediapipe",namespace:"host"}));
   build.onLoad({filter:/.*/,namespace:"host"},args=>({contents:args.path==="engine"?engine:
@@ -31,6 +33,6 @@ const result=await build({absWorkingDir:root,stdin:{contents:'export * from "./s
  }}]});
 const module={exports:{}};
 new Function("require","module","exports",result.outputFiles[0].text)(createRequire(import.meta.url),module,module.exports);
-export const {NeedleTrackingManager,HandInstance,FaceFilterRoot,FaceFilterHeadPosition,FaceMeshTexture,FilterBehaviour,TypeStore,HandTrackingBehaviour,HandTrackingSkinnedMeshRenderer}=module.exports;
+export const {NeedleTrackingManager,HandAttachment,FaceInstance,HandInstance,FaceFilterRoot,FaceFilterHeadPosition,FaceMeshTexture,FilterBehaviour,TypeStore,HandTrackingBehaviour,HandTrackingSkinnedMeshRenderer}=module.exports;
 
 export const THREE=createRequire(import.meta.url)("three");

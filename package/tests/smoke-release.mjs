@@ -39,6 +39,7 @@ await check("renamed Unity manager preserves its 1.x script identity and migrati
     const registration = await read("codegen/register_types.ts");
     const names = [...registration.matchAll(/TypeStore\.add\("([^"]+)"/g)].map(match => match[1]);
     assert.equal(new Set(names).size, names.length, "Duplicate runtime component registrations");
+    assert.match(registration, /TypeStore\.add\("HandAttachment", HandAttachment\)/);
     assert.doesNotMatch(registration, /from ["']\.\.\/(?:lib|dist)\//, "Source registration must not import compiled copies");
     assert.match(registration, /TypeStore\.add\("NeedleTrackingManager", NeedleTrackingManager\)/);
     assert.match(registration, /TypeStore\.add\("HandTrackingBehaviour", HandTrackingBehaviour\)/);
@@ -75,7 +76,7 @@ await check("release TypeScript emits the library without compiling the Vite tes
 await check("public API and component registration bundle for browsers", async () => {
     await build({ absWorkingDir: root, entryPoints: ["index.ts", "codegen/register_types.ts"],
         bundle: true, platform: "browser", format: "esm", outdir: join(staging, "bundle"), write: false,
-        packages: "external", logLevel: "silent" });
+        packages: "external", loader: { ".glb": "file" }, logLevel: "silent" });
 });
 
 await check("npm tarball includes Unity migration files and excludes tests", async () => {
@@ -91,7 +92,10 @@ await check("npm tarball includes Unity migration files and excludes tests", asy
     const paths = new Set(packed.files.map(file => file.path));
     for (const path of ["index.ts", "src/TrackingManager.ts", "lib/index.js", "codegen/register_types.ts",
         "unity/package.json", "unity/needle-facefilter.npmdef", "unity/Runtime/NeedleTrackingManager.cs",
-        "unity/Runtime/NeedleTrackingManager.cs.meta", "unity/Runtime/Scripts/TrackingManager.cs"])
+        "unity/Runtime/NeedleTrackingManager.cs.meta", "unity/Runtime/Scripts/TrackingManager.cs",
+        "src/hands/HandAttachment.ts", "unity/Runtime/HandAttachment.cs", "unity/Runtime/HandAttachment.cs.meta",
+        "unity/Runtime/Scripts/HandEditors.cs", "unity/Runtime/Scripts/HandEditors.cs.meta",
+        "unity/Runtime/Models/left.glb", "unity/Runtime/Models/right.glb", "unity/Runtime/Models/LICENSE.md"])
         assert.ok(paths.has(path), `Tarball missing ${path}`);
     assert.ok(![...paths].some(path => path.startsWith("tests/") || path.includes("node_modules/")));
     assert.equal(packed.version, manifest.version);

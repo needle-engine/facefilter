@@ -1,3 +1,4 @@
+import { SharedHandMesh } from "../../src/hands/SharedHandMesh.ts";
 import { strict as assert } from "node:assert";
 import { test } from "vitest";
 import { readFile } from "node:fs/promises";
@@ -17,11 +18,13 @@ test("hand skin starts, disappears, reacquires, and toggles without disabling it
     let validPose = true;
     const skin = { enabled: true, bindHand() {}, updateHand: () => validPose };
     const module = { exports: {} };
-    new Function("Behaviour", "serializable", "NeedleTrackingManager", "module", "exports", code)(
+    new Function("SharedHandMesh", "Behaviour", "serializable", "NeedleTrackingManager", "module", "exports", code)(
+        SharedHandMesh,
         class {}, () => () => {}, { instance: { getHand: () => hand } }, module, module.exports);
     const controller = new module.exports.HandTrackingBehaviour();
     const root = new Group();
     const mesh = new Mesh();
+    mesh.isSkinnedMesh = true;
     root.add(mesh);
     root.getOrAddComponent = () => skin;
     controller.gameObject = root;
