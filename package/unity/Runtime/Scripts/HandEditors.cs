@@ -11,9 +11,12 @@ namespace Needle.Typescript.GeneratedComponents
         {
             var prop = obj.FindProperty(property);
             var index = System.Array.IndexOf(values, prop.stringValue);
+            var mixed = EditorGUI.showMixedValue;
+            EditorGUI.showMixedValue = prop.hasMultipleDifferentValues;
             EditorGUI.BeginChangeCheck();
             var next = EditorGUILayout.Popup(label, Mathf.Max(0, index), labels ?? values);
             if (EditorGUI.EndChangeCheck()) prop.stringValue = values[next];
+            EditorGUI.showMixedValue = mixed;
         }
         internal static void Field(SerializedObject obj, string name, string label = null)
         {
@@ -53,6 +56,47 @@ namespace Needle.Typescript.GeneratedComponents
             foreach (var bone in model.GetComponentsInChildren<Transform>(true)) if (bone.name == name) return bone;
             return null;
         }
+        // Match FingerPose.buildFingerBasis, using the imported GLB joint positions.
+        // UnityGLTF reflects X, so the cross-product normal changes sign on import.
+        internal static bool AttachmentRotation(GameObject model, string hand, string finger, bool palm, string coordinateSpace, Vector3 forward, out Quaternion rotation)
+        {
+            rotation = Quaternion.identity;
+            var wrist = Bone(model, "wrist");
+            var names = new[] { "index", "middle", "ring", "pinky" };
+            var knuckles = new Transform[4];
+            for (var i = 0; i < 4; i++) {
+                knuckles[i] = Bone(model, names[i] + "-finger-phalanx-proximal");
+                if (!knuckles[i]) return false;
+            }
+            if (!wrist || forward.sqrMagnitude < 1e-8f) return false;
+            var normal = Vector3.zero;
+            for (var i = 0; i < 3; i++)
+                normal += Vector3.Cross(knuckles[i].position - wrist.position, knuckles[i + 1].position - wrist.position);
+            // Any/Both currently preview the Right tracking handle (left anatomical GLB).
+            if (hand == "Left") normal = -normal;
+            var palmForward = (knuckles[1].position - wrist.position).normalized;
+            var reference = forward.normalized;
+            if (!palm) {
+                var prefix = finger == "thumb" ? "thumb" : finger + "-finger";
+                var a = Bone(model, prefix + (finger == "thumb" ? "-metacarpal" : "-phalanx-proximal"));
+                var b = Bone(model, prefix + (finger == "thumb" ? "-phalanx-proximal" : "-phalanx-intermediate"));
+                if (!a || !b) return false;
+                reference = (b.position - a.position).normalized;
+            }
+            var up = Vector3.ProjectOnPlane(normal, palmForward).normalized;
+            if (up.sqrMagnitude < 1e-8f || reference.sqrMagnitude < 1e-8f) return false;
+            var right = Vector3.Cross(up, palmForward).normalized;
+            var bend = Vector3.Dot(palmForward, reference) < -1 + 1e-6f
+                ? Quaternion.AngleAxis(180, right) : Quaternion.FromToRotation(palmForward, reference);
+            right = bend * right; up = bend * up;
+            forward.Normalize();
+            bend = Vector3.Dot(reference, forward) < -1 + 1e-6f
+                ? Quaternion.AngleAxis(180, right) : Quaternion.FromToRotation(reference, forward);
+            // Unity authoring +Y points outward from the back of the hand.
+            // attachToHand applies the same convention to the tracking anchor.
+            rotation = Quaternion.LookRotation(forward, (coordinateSpace == "finger-pad" ? 1 : -1) * (bend * up));
+            return true;
+        }
         internal static void Draw(string hand, Matrix4x4 placement, float opacity = 1)
         {
             var model = Model(hand); if (!model) return;
@@ -70,7 +114,7 @@ namespace Needle.Typescript.GeneratedComponents
         }
     }
 
-    [CustomEditor(typeof(HandTrackingBehaviour))]
+    [CustomEditor(typeof(HandTrackingBehaviour)), CanEditMultipleObjects]
     internal class HandTrackingInspector : Editor
     {
         public override void OnInspectorGUI()
@@ -116,7 +160,7 @@ namespace Needle.Typescript.GeneratedComponents
         }
     }
 
-    [CustomEditor(typeof(HandAttachment))]
+    [CustomEditor(typeof(HandAttachment)), CanEditMultipleObjects]
     internal class HandAttachmentInspector : Editor
     {
         private bool _advanced;
@@ -124,9 +168,12 @@ namespace Needle.Typescript.GeneratedComponents
         private void Millimetres(string name, string label, float min, float max)
         {
             var prop = serializedObject.FindProperty(name);
+            var mixed = EditorGUI.showMixedValue;
+            EditorGUI.showMixedValue = prop.hasMultipleDifferentValues;
             EditorGUI.BeginChangeCheck();
             var value = EditorGUILayout.Slider(label + " (mm)", prop.floatValue * 1000, min, max);
             if (EditorGUI.EndChangeCheck()) prop.floatValue = Mathf.Clamp(value, min, max) / 1000;
+            EditorGUI.showMixedValue = mixed;
         }
         public override void OnInspectorGUI()
         {
@@ -137,14 +184,20 @@ namespace Needle.Typescript.GeneratedComponents
             HandInspectorUI.Choice(serializedObject, "handedness", "Hand", new[] { "Left", "Right", "Any", "Both" });
             HandInspectorUI.Choice(serializedObject, "finger", "Placement", new[] { "wrist", "palm", "thumb", "index", "middle", "ring", "pinky" }, new[] { "Wrist / Base", "Palm", "Thumb", "Index", "Middle", "Ring", "Pinky" });
             var placement = serializedObject.FindProperty("finger").stringValue;
-            var isFinger = placement != "wrist" && placement != "palm";
+            var mixedPlacement = serializedObject.FindProperty("finger").hasMultipleDifferentValues;
+            var isFinger = !mixedPlacement && placement != "wrist" && placement != "palm";
+            if (mixedPlacement) EditorGUILayout.HelpBox("Selected attachments use different placements. Select matching placements to edit segment and autofit settings together.", MessageType.None);
             if (isFinger) {
                 var segment = serializedObject.FindProperty("segment");
-                segment.intValue = EditorGUILayout.Popup("Finger Segment", segment.intValue, new[] { "Base", "Middle", "Tip" });
+                EditorGUI.showMixedValue = segment.hasMultipleDifferentValues;
+                EditorGUI.BeginChangeCheck();
+                var nextSegment = EditorGUILayout.Popup("Finger Segment", segment.intValue, new[] { "Base", "Middle", "Tip" });
+                if (EditorGUI.EndChangeCheck()) segment.intValue = nextSegment;
+                EditorGUI.showMixedValue = false;
             }
-            if (placement != "wrist") HandInspectorUI.Field(serializedObject, "position", placement == "palm" ? "Wrist to Middle Knuckle" : "Position Along Segment");
+            if (!mixedPlacement && placement != "wrist") HandInspectorUI.Field(serializedObject, "position", placement == "palm" ? "Wrist to Middle Knuckle" : "Position Along Segment");
             var selectedHand = serializedObject.FindProperty("handedness").stringValue;
-            EditorGUILayout.HelpBox(selectedHand == "Any" ? "Follows one available hand. Keeps that hand until it is lost, then switches to the other."
+            EditorGUILayout.HelpBox(serializedObject.FindProperty("handedness").hasMultipleDifferentValues ? "Selected attachments use different hands. Changing Hand applies to all selected attachments." : selectedHand == "Any" ? "Follows one available hand. Keeps that hand until it is lost, then switches to the other."
                 : selectedHand == "Both" ? "Shows a visual copy on each hand. Set Max Hands to 2 to track both together."
                 : "Appears only on the " + selectedHand.ToLowerInvariant() + " hand. Hides while that hand is not tracked.", MessageType.None);
             HandInspectorUI.Field(serializedObject, "rotationSmoothing", "Rotation Smoothing (s)");
@@ -153,7 +206,7 @@ namespace Needle.Typescript.GeneratedComponents
             if (serializedObject.FindProperty("handOcclusion").boolValue)
                 EditorGUILayout.HelpBox("Hides parts of this object behind your hand. Hand attachments share one invisible hand mesh. It is removed when no attachment needs it, unless Hand Mesh Tracking is also enabled.", MessageType.None);
             if (isFinger) HandInspectorUI.Field(serializedObject, "autoFit", "Autofit Ring to Hand Mesh");
-            if (isFinger && serializedObject.FindProperty("autoFit").boolValue)
+            if (isFinger && !serializedObject.FindProperty("autoFit").hasMultipleDifferentValues && serializedObject.FindProperty("autoFit").boolValue)
             {
                 EditorGUILayout.HelpBox("Measures the ring opening and fits it to your finger. Fit Factor: 1 = measured fit, below 1 = tighter, above 1 = looser. Enable Hand Occlusion or add Hand Mesh Tracking. Align the opening with local Z.", MessageType.Info);
                 HandInspectorUI.Field(serializedObject, "fitFactor", "Fit Factor");
@@ -161,8 +214,11 @@ namespace Needle.Typescript.GeneratedComponents
                 if (_fitAdvanced) {
                     var radius = serializedObject.FindProperty("innerRadius");
                     var automatic = radius.floatValue <= 0;
+                    EditorGUI.showMixedValue = radius.hasMultipleDifferentValues;
+                    EditorGUI.BeginChangeCheck();
                     var nextAutomatic = EditorGUILayout.Toggle("Measure Opening Automatically", automatic);
-                    if (nextAutomatic != automatic) radius.floatValue = nextAutomatic ? 0 : 0.01f;
+                    if (EditorGUI.EndChangeCheck()) radius.floatValue = nextAutomatic ? 0 : 0.01f;
+                    EditorGUI.showMixedValue = false;
                     if (!nextAutomatic) Millimetres("innerRadius", "Opening Radius", 0.1f, 50);
                     Millimetres("halfWidth", "Band Half Width", 0, 10);
                     Millimetres("clearance", "Surface Clearance", 0, 2);
@@ -171,6 +227,7 @@ namespace Needle.Typescript.GeneratedComponents
             }
             _advanced = EditorGUILayout.Foldout(_advanced, "Optional Overrides", true);
             if (_advanced) {
+                HandInspectorUI.Choice(serializedObject, "coordinateSpace", "Coordinate Space", new[] { "hand-back", "finger-pad" }, new[] { "Hand Back (+Y outward)", "Finger Pad (+Y toward pad)" });
                 HandInspectorUI.Field(serializedObject, "offset", "Tracking Offset (m)");
                 EditorGUILayout.HelpBox("For visual placement, attach a parent object and position the model as its child. Tracking Offset shifts the attachment in its tracking frame.", MessageType.None);
                 HandInspectorUI.Field(serializedObject, "manager", "Manager Override");
@@ -183,7 +240,7 @@ namespace Needle.Typescript.GeneratedComponents
             var manager = attachment.manager ? attachment.manager : Object.FindObjectOfType<NeedleTrackingManager>();
             if (manager && System.Array.IndexOf(manager.filters, attachment.transform) >= 0)
                 EditorGUILayout.HelpBox("Remove this object from the manager's face Filters list. Hand attachments work independently and must not be face filters.", MessageType.Warning);
-            EditorGUILayout.HelpBox("The hand gizmo previews your selected finger and position using the packaged model. Rotate and scale your object to fit. Blue is along the finger; green is toward the pad. Autofit is applied in the browser.", MessageType.None);
+            EditorGUILayout.HelpBox("The hand gizmo previews your selected finger and position using the packaged model. Rotate and scale your object to fit. Blue is along the finger; green is +Y in the selected coordinate space. Autofit is applied in the browser.", MessageType.None);
         }
         [DrawGizmo(GizmoType.Selected | GizmoType.NonSelected)]
         private static void DrawAttachment(HandAttachment attachment, GizmoType type)
@@ -199,11 +256,10 @@ namespace Needle.Typescript.GeneratedComponents
             var a = HandModelPreview.Bone(model, isPalm ? "wrist" : prefix + "-" + sections[index]);
             var b = HandModelPreview.Bone(model, isPalm ? "middle-finger-phalanx-proximal" : prefix + "-" + sections[index + 1]);
             if (!a || !b) return;
-            var start = a.position; var end = b.position; var up = a.up;
+            var start = a.position; var end = b.position;
             var direction = end - start;
             if (direction.sqrMagnitude < 0.000001f) return;
-            if (Vector3.Cross(direction, up).sqrMagnitude < 0.000001f) up = attachment.transform.right;
-            var rotation = Quaternion.LookRotation(direction, up);
+            if (!HandModelPreview.AttachmentRotation(model, attachment.handedness, attachment.finger, isPalm, attachment.coordinateSpace, direction, out var rotation)) return;
             var sample = Vector3.Lerp(start, end, attachment.finger == "wrist" ? 0 : attachment.position) + rotation * attachment.offset;
             var target = attachment.target ? attachment.target : attachment.transform;
             // Exclude the accessory's scale: the reference hand stays life-sized.

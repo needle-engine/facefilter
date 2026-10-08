@@ -360,7 +360,8 @@ exported web scenes using the old component name must not be paired with the
 | --- | --- |
 | Hand identity | `getHand("Left")` / `getHand("Right")` returns a persistent handle; check `isTracked` for current availability. |
 | Placement | `{ p0, p1, t01 }` interpolates between named joints. Use 0?1 for points inside a segment. The ring demo uses MCP ? PIP at 0.75. |
-| Anchor axes | +Z follows the finger segment, +Y points toward its pad, +X completes the orthogonal frame. |
+| Attachment axes | `coordinateSpace: "hand-back"` (default): +Z follows the finger, +Y points outward from the back of the hand. `"finger-pad"` points +Y toward the pad. Offsets and child transforms use the selected frame. |
+| Raw joint axes | `getJoint()` retains the low-level pad-facing tracking frame. |
 | Asset transform | Set rotation and scale before attaching. `offset` sets local position in anatomical metres. Image projection converts this scale to image units. |
 | Pose units | Image-mode joint positions are camera-relative image units, not physical metres. Relative depth supports ordering, not measured camera distance. |
 | Autofit | Requires an active `HandTrackingBehaviour` skin for the same hand; only the selected finger segment contributes. |
@@ -442,6 +443,11 @@ wrappers from Assets after disabling generation; retain the shipped Unity packag
 5. Export and open the browser. Live camera tracking runs in the browser.
 
 The component attaches its own GameObject and finds the scene manager automatically.
+Unity authoring uses +Z along the finger and +Y away from the back of the hand.
+`HandAttachment` and `attachToHand()` both default to `coordinateSpace: "hand-back"`.
+The anchor performs the conversion; authored object rotations are never modified.
+Use `"finger-pad"` explicitly for assets authored against the previous pad-facing API.
+In Unity this setting is under Optional Overrides.
 **Optional Overrides** lets you select another target or manager. Tracking loss hides
 the attachment; the manager keeps it registered so it can recover. Explicitly disabling
 the component detaches the model and restores its former parent and position.

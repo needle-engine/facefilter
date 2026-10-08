@@ -14,6 +14,7 @@ namespace Needle.Typescript.GeneratedComponents
         public int segment = 0;
         [Range(0, 1)] public float position = 0.75f;
         public Vector3 offset;
+        public string coordinateSpace = "hand-back";
         public bool handOcclusion = false;
         public bool autoFit = false;
         [Range(0.8f, 1.2f), Tooltip("Multiplier of the measured fit. 1 fits the finger; lower is tighter, higher is looser.")]

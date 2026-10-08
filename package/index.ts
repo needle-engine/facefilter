@@ -39,7 +39,7 @@ export {
 } from "./src/hands/HandTrackingBehaviour.js";
 
 export type { HandAttachmentAutoFit, HandAutoFitStatus } from "./src/hands/HandAttachmentFit.js";
-export type { HandAttachmentPoint, HandAttachmentOption, HandAttachmentHandle, HandAttachmentStatus } from "./src/TrackingManager.js";
+export type { HandAttachmentCoordinateSpace, HandAttachmentPoint, HandAttachmentOption, HandAttachmentHandle, HandAttachmentStatus } from "./src/TrackingManager.js";
 
 export { HandInstance } from "./src/TrackingManager.js";
 

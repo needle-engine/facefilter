@@ -28,7 +28,7 @@ export async function addDemoRings(manager: NeedleTrackingManager) {
             const point = { p0: "ring_finger_mcp", p1: "ring_finger_pip", t01: .75 } as const;
             // Hand anchors read this interpolation value every tracking frame.
             attachments.push(point);
-            handles.push(manager.getHand(side).attachToHand(ring, point, { autoFit, rotationSmoothing, rotationFilter }));
+            handles.push(manager.getHand(side).attachToHand(ring, point, { coordinateSpace: "finger-pad", autoFit, rotationSmoothing, rotationFilter }));
         }
     } catch (error) { dispose(); throw error; }
     return {

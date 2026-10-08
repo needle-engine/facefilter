@@ -2,7 +2,7 @@ import { requestHandOcclusion } from "./HandTrackingBehaviour.js";
 import { Behaviour, serializable } from "@needle-tools/engine";
 import { clone } from "three/examples/jsm/utils/SkeletonUtils.js";
 import { Object3D, Vector3 } from "three";
-import { NeedleTrackingManager, type HandAttachmentHandle, type HandAttachmentPoint, type HandAttachmentOption } from "../TrackingManager.js";
+import { NeedleTrackingManager, type HandAttachmentCoordinateSpace, type HandAttachmentHandle, type HandAttachmentPoint, type HandAttachmentOption } from "../TrackingManager.js";
 
 /** Unity authoring adapter. Attaches its own object by default and finds the scene manager automatically. */
 export class HandAttachment extends Behaviour {
@@ -22,6 +22,9 @@ export class HandAttachment extends Behaviour {
     offset = new Vector3();
     @serializable()
     autoFit = false;
+    /** +Y outward from the hand back by default; matches attachToHand(). */
+    @serializable()
+    coordinateSpace: HandAttachmentCoordinateSpace = "hand-back";
     @serializable()
     fitFactor = 1;
     /** Zero selects automatic mesh measurement. Positive values are metres. */
@@ -97,7 +100,7 @@ export class HandAttachment extends Behaviour {
         const parent = target.parent, position = target.position.clone();
         try {
             const options: HandAttachmentOption = {
-                offset: this.offset, rotationSmoothing: Number.isFinite(this.rotationSmoothing) ? Math.max(0, Math.min(.5, this.rotationSmoothing)) : .12, rotationFilter: { mode: "twist" },
+                coordinateSpace: this.coordinateSpace, offset: this.offset, rotationSmoothing: Number.isFinite(this.rotationSmoothing) ? Math.max(0, Math.min(.5, this.rotationSmoothing)) : .12, rotationFilter: { mode: "twist" },
                 autoFit: this.autoFit && this.finger !== "wrist" && this.finger !== "palm" ? {
                     innerRadius: this.innerRadius > 0 ? this.innerRadius : undefined,
                     fitFactor: this.fitFactor,

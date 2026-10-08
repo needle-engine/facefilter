@@ -1,3 +1,4 @@
+/// <reference path="../assets.d.ts" />
 import leftHandUrl from "../../unity/Runtime/Models/left.glb?url";
 import rightHandUrl from "../../unity/Runtime/Models/right.glb?url";
 import { SharedHandMesh } from "./SharedHandMesh.js";

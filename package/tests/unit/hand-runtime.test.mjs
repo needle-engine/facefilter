@@ -185,3 +185,33 @@ test("runtime occlusion toggles share models and removal preserves another reque
   a.onDestroy();assert.equal(removed,1);
  } finally {a.detach();b.detach();if(previous)THREE.Object3D.prototype.addComponent=previous;else delete THREE.Object3D.prototype.addComponent;}
 });
+
+
+test("Unity and direct attachments share hand-back axes without modifying authored rotations", () => {
+ const {manager}=runtime(),owner=new Group(),model=new Group(),child=new Group();
+ owner.add(model);model.add(child);child.position.y=.0065;
+ model.rotation.set(.1,.2,.3);const authored=model.quaternion.clone();
+ const attachment=new HandAttachment();attachment.manager=manager;attachment.gameObject=model;attachment.handedness="Left";attachment.rotationSmoothing=0;
+ const hand=manager.getHand("Left"),point={p0:"ring_finger_mcp",p1:"ring_finger_pip",t01:.75};
+ const direct=new Group(),pad=new Group();
+ hand.attachToHand(direct,point,{offset:{x:0,y:.0065,z:0}});
+ hand.attachToHand(pad,point,{coordinateSpace:"finger-pad"});
+ for(let i=0;i<3;i++){
+  attachment.attach();assert.equal(attachment.status.error,null);
+  feed(manager,structuredClone(capture.frames[0]));
+  assert.ok(model.quaternion.angleTo(authored)<1e-7);
+  assert.ok(model.parent.quaternion.angleTo(direct.parent.quaternion)<1e-7);
+  const up=new Vector3(0,1,0).applyQuaternion(direct.parent.quaternion);
+  const padUp=new Vector3(0,1,0).applyQuaternion(pad.parent.quaternion);
+  assert.ok(up.dot(padUp)<-.999999);
+  const along=new Vector3(0,0,1).applyQuaternion(direct.parent.quaternion);
+  const padAlong=new Vector3(0,0,1).applyQuaternion(pad.parent.quaternion);
+  assert.ok(along.dot(padAlong)>.999999);
+  const delta=direct.position.clone().applyQuaternion(direct.parent.quaternion);
+  assert.ok(delta.dot(up)>0,"positive offset follows the selected convention");
+  attachment.detach();assert.ok(model.quaternion.angleTo(authored)<1e-7);assert.equal(model.parent,owner);
+ }
+ attachment.coordinateSpace="finger-pad";attachment.attach();feed(manager,structuredClone(capture.frames[0]));
+ assert.ok(model.parent.quaternion.angleTo(pad.parent.quaternion)<1e-7);attachment.detach();
+ assert.throws(()=>hand.attachToHand(new Group(),point,{coordinateSpace:"typo"}),/coordinateSpace/);
+});

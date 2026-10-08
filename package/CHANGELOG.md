@@ -4,6 +4,10 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+- Unify `HandAttachment` and `attachToHand()` on `coordinateSpace: "hand-back"` (+Y outward, +Z along the finger). This changes the earlier 2.x prerelease attachment default: pass `coordinateSpace: "finger-pad"` to preserve its orientation and offsets. Raw `getJoint()` axes are unchanged.
+- Support Unity multi-object editing and align hand preview axes with the selected attachment convention.
+
 ## [2.0.0-beta.0] - 2026-10-07
 - Retarget generic WebXR hand skins to tracked landmarks with corrected joint mappings, rotations, and scale.
 - Add visible hand meshes and selectable depth-only ring occlusion to the web demo.

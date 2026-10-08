@@ -90,14 +90,14 @@ export function setupHandTrackingDebug(context: Context, manager: NeedleTracking
                 const isIndexTip = finger.name === "Index" && segment === 2;
                 const marker = createFingerMarker(finger.color, `${finger.code}${segment + 1}`);
                 marker.scale.setScalar(.6);
-                hand.attachToHand(marker, { p0: finger.joints[segment], p1: finger.joints[segment + 1], t01: .5 });
+                hand.attachToHand(marker, { p0: finger.joints[segment], p1: finger.joints[segment + 1], t01: .5 }, { coordinateSpace: "finger-pad" });
                 debugMarkers.push({ side, group: finger.name, name: `${finger.code}${segment + 1}`, marker });
                 if (isIndexTip) markers.push({ side, marker });
             }
         }
         const palm = createFingerMarker(0xffffff, "Palm");
         palm.scale.setScalar(.8);
-        hand.attachToHand(palm, { p0: "wrist", p1: "middle_finger_mcp", t01: .5 });
+        hand.attachToHand(palm, { p0: "wrist", p1: "middle_finger_mcp", t01: .5 }, { coordinateSpace: "finger-pad" });
         debugMarkers.push({ side, group: "Palm", name: "Palm", marker: palm });
     }
 

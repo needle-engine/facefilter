@@ -1283,7 +1283,11 @@ export type HandAttachmentPoint = MediapipeHelper.HandKeypointName | {
     p1: MediapipeHelper.HandKeypointName,
     t01: number,
 };
+/** +Z follows the finger in both conventions. */
+export type HandAttachmentCoordinateSpace = "hand-back" | "finger-pad";
 export type HandAttachmentOption = {
+    /** Default hand-back: +Y points outward from the back of the hand. finger-pad preserves the original tracking axes. */
+    coordinateSpace?: HandAttachmentCoordinateSpace;
     offset?: Vector3Like;
     autoFit?: false | HandAttachmentAutoFit;
     /** Rotation damping in seconds. Default 0; try 0.12 for jewelry. */
@@ -1303,6 +1307,7 @@ const _handRight = new Vector3();
 const _handUp = new Vector3();
 const _handRotationMatrix = new Matrix4();
 const _handRotation = new Quaternion();
+const _handBackRotation = new Quaternion(0, 0, 1, 0);
 
 export type HandAttachmentStatus = {
     state: "attached" | "detached";
@@ -1361,7 +1366,7 @@ export class HandInstance implements ITrackingInstance {
             cameraLandmarks: this._cameraLandmarks.map(p => p.toArray()),
         };
     }
-    private readonly _anchors = new Map<string, { point: HandAttachmentPoint, object: Object3D, rotationFilter?: HandRotationFilter, rotationSmoothing?: number, rotationOptions?: HandRotationFilterOptions }>();
+    private readonly _anchors = new Map<string, { point: HandAttachmentPoint, object: Object3D, coordinateSpace?: HandAttachmentCoordinateSpace, rotationFilter?: HandRotationFilter, rotationSmoothing?: number, rotationOptions?: HandRotationFilterOptions }>();
     private readonly _behaviours: HandTrackingBehaviour[] = [];
     private readonly _attachmentFits = new Map<Object3D, HandAttachmentFit>();
     private readonly _debugObjects: Object3D[] = [];
@@ -1391,6 +1396,8 @@ export class HandInstance implements ITrackingInstance {
 
     /** Attach a loaded object. Returns an idempotent cleanup handle; caller owns asset resources. */
     attachToHand(obj: Object3D, point: HandAttachmentPoint, opts: HandAttachmentOption = {}): HandAttachmentHandle {
+        if (opts.coordinateSpace !== undefined && opts.coordinateSpace !== "hand-back" && opts.coordinateSpace !== "finger-pad")
+            throw new Error("Hand attachment coordinateSpace must be hand-back or finger-pad.");
         const names = typeof point === "string" ? [point] : [point.p0, point.p1];
         if (names.some(name => MediapipeHelper.getJointIndex(name) < 0) ||
             (typeof point !== "string" && !Number.isFinite(point.t01)))
@@ -1405,7 +1412,7 @@ export class HandInstance implements ITrackingInstance {
         object.name = `Hand ${this.handedness} attachment ${obj.name}`;
         object.visible = false;
         object.add(obj);
-        this._anchors.set(key, {point, object,
+        this._anchors.set(key, {point, object, coordinateSpace: opts.coordinateSpace ?? "hand-back",
             rotationFilter: opts.rotationSmoothing && opts.rotationSmoothing > 0 ? new HandRotationFilter() : undefined,
             rotationSmoothing: opts.rotationSmoothing, rotationOptions: opts.rotationFilter});
         obj.position.set(opts.offset?.x ?? 0, opts.offset?.y ?? 0, opts.offset?.z ?? 0);
@@ -1541,7 +1548,7 @@ export class HandInstance implements ITrackingInstance {
         _handSide.set(0, 0, 0);
         if (indexKnuckle && pinkyKnuckle) _handSide.subVectors(indexKnuckle, pinkyKnuckle);
 
-        for (const { point, object, rotationFilter, rotationSmoothing, rotationOptions } of this._anchors.values()) {
+        for (const { point, object, coordinateSpace, rotationFilter, rotationSmoothing, rotationOptions } of this._anchors.values()) {
             const from = typeof point === "string" ? point : point.p0;
             const fromIndex = MediapipeHelper.getJointIndex(from);
             if (!this.getJointPosition(fromIndex, _handPoint)) continue;
@@ -1585,6 +1592,7 @@ export class HandInstance implements ITrackingInstance {
             object.quaternion.copy(rotationFilter
                 ? rotationFilter.update(_handRotation, this.context.time.deltaTime, rotationSmoothing!, this._measurementTime, rotationOptions)
                 : _handRotation);
+            if (coordinateSpace === "hand-back") object.quaternion.multiply(_handBackRotation);
         }
         if (debug && this.manager.showHandDebugOverlays) this.renderDebug(camera);
         else for (const object of this._debugObjects) object.visible = false;
