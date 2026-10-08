@@ -81,7 +81,7 @@ export class FaceFilterRoot extends Behaviour {
 
         // First check if we have a face placement helper assigned
         // If so this is the exact object that we use for the face position
-        const face = this.gameObject.getComponentInChildren(FaceFilterHeadPosition);
+        const face = this.gameObject.getComponentsInChildren(FaceFilterHeadPosition)[0];
         if (face) {
             head = face.gameObject;
         }
@@ -149,32 +149,16 @@ export class FaceFilterRoot extends Behaviour {
 
 
         if (head) {
-            // The matrix of the root object should not affect the head object
-            // E.g. if the root avatar is offset in the scene at the moment/scaled/rotated... it doesnt matter
-            // We only care about the matrix of the found head WITHIN this rig
-            const parent = this.gameObject.parent;
-            this.gameObject.parent = null;
-            this.gameObject.matrixAutoUpdate = false;
-            this.gameObject.matrix.identity();
-            this.gameObject.matrixWorld.identity();
-
-            // Calculate the head matrix
-            head.updateWorldMatrix(true, false);
+            // Accumulate the authored local chain without temporarily detaching
+            // the root or overwriting its matrices. Hidden marker components still
+            // define placement; their enabled state must not change model size.
             this._headMatrix = new Matrix4();
-            this._headMatrix.copy(head.matrixWorld);
-            // apply the scale of the initial object
-            // const scale = this._initialScale.clone();
-            // scale.x = 1 / scale.x;
-            // scale.y = 1 / scale.y;
-            // scale.z = 1 / scale.z;
-            // this._headMatrix.scale(scale);
-            // the matrix will be used to transform the root to the head so we invert it
+            for (let node: Object3D | null = head; node && node !== this.gameObject; node = node.parent) {
+                if (node.matrixAutoUpdate) node.updateMatrix();
+                this._headMatrix.premultiply(node.matrix);
+            }
             this._headMatrix.invert();
-            // when we are rendering in mirror mode we want to flip the head matrix
             FacefilterUtils.flipX(this._headMatrix);
-
-            // Reset the parent
-            this.gameObject.parent = parent;
         }
         else {
             // apply the root scale if nothing is setup and no head object is found

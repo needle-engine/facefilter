@@ -1,5 +1,5 @@
 import { strict as assert } from "node:assert";
-import { test } from "node:test";
+import { test } from "vitest";
 import { Quaternion, Vector3 } from "three";
 import { HandRotationFilter } from "../../src/hands/HandRotationFilter.ts";
 const rotation = angle => new Quaternion().setFromAxisAngle(new Vector3(0, 0, 1), angle);

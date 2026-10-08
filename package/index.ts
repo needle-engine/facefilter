@@ -38,8 +38,8 @@ export {
     HandTrackingSkinnedMeshRenderer,
 } from "./src/hands/HandTrackingBehaviour.js";
 
-export type { HandAttachmentAutoFit } from "./src/hands/HandAttachmentFit.js";
-export type { HandAttachmentPoint, HandAttachmentOption } from "./src/TrackingManager.js";
+export type { HandAttachmentAutoFit, HandAutoFitStatus } from "./src/hands/HandAttachmentFit.js";
+export type { HandAttachmentPoint, HandAttachmentOption, HandAttachmentHandle, HandAttachmentStatus } from "./src/TrackingManager.js";
 
 export { HandInstance } from "./src/TrackingManager.js";
 
@@ -48,3 +48,5 @@ export {
     ReadyPlayerMeFacefilterSupport as ReadyPlayerMeFaceFilter,
 } from "./src/examples/index.js"
 export type { HandRotationFilterOptions } from "./src/hands/HandRotationFilter.js";
+
+export { measureRingOpening, type RingOpeningMeasurement } from "./src/hands/RingOpening.js";

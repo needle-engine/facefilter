@@ -20,19 +20,22 @@ import { HandTrackingBehaviour } from "../src/hands/HandTrackingBehaviour.js";
 import { HandTrackingSkinnedMeshRenderer } from "../src/hands/HandTrackingBehaviour.js";
 
 // Register types
-TypeStore.add("FaceFilterRoot", FaceFilterRoot);
-TypeStore.add("FaceFilterHeadPosition", FaceFilterHeadPosition);
-TypeStore.add("FaceFilterBlendshapes", FaceFilterBlendshapes);
-TypeStore.add("FaceFilterAnimator", FaceFilterAnimator);
-TypeStore.add("FaceFilterEyeBehaviour", FaceFilterEyeBehaviour);
-TypeStore.add("NeedleOcclusionMesh", NeedleOcclusionMesh);
-TypeStore.add("NeedleBackgroundMesh", NeedleBackgroundMesh);
-TypeStore.add("NeedleTrackingManager", NeedleTrackingManager);
-TypeStore.add("ReadyPlayerMeFacefilterSupport", ReadyPlayerMeFacefilterSupport);
-TypeStore.add("ShaderToyFaceFilter", ShaderToyFaceFilter);
-TypeStore.add("FaceMeshTexture", FaceMeshTexture);
-TypeStore.add("FaceMeshCustomShader", FaceMeshCustomShader);
-TypeStore.add("FaceMeshVideo", FaceMeshVideo);
-TypeStore.add("FaceGeometry", FaceGeometry);
-TypeStore.add("HandTrackingBehaviour", HandTrackingBehaviour);
-TypeStore.add("HandTrackingSkinnedMeshRenderer", HandTrackingSkinnedMeshRenderer);
+export function registerTypes() {
+	TypeStore.add("FaceFilterRoot", FaceFilterRoot);
+	TypeStore.add("FaceFilterHeadPosition", FaceFilterHeadPosition);
+	TypeStore.add("FaceFilterBlendshapes", FaceFilterBlendshapes);
+	TypeStore.add("FaceFilterAnimator", FaceFilterAnimator);
+	TypeStore.add("FaceFilterEyeBehaviour", FaceFilterEyeBehaviour);
+	TypeStore.add("NeedleOcclusionMesh", NeedleOcclusionMesh);
+	TypeStore.add("NeedleBackgroundMesh", NeedleBackgroundMesh);
+	TypeStore.add("NeedleTrackingManager", NeedleTrackingManager);
+	TypeStore.add("ReadyPlayerMeFacefilterSupport", ReadyPlayerMeFacefilterSupport);
+	TypeStore.add("ShaderToyFaceFilter", ShaderToyFaceFilter);
+	TypeStore.add("FaceMeshTexture", FaceMeshTexture);
+	TypeStore.add("FaceMeshCustomShader", FaceMeshCustomShader);
+	TypeStore.add("FaceMeshVideo", FaceMeshVideo);
+	TypeStore.add("FaceGeometry", FaceGeometry);
+	TypeStore.add("HandTrackingBehaviour", HandTrackingBehaviour);
+	TypeStore.add("HandTrackingSkinnedMeshRenderer", HandTrackingSkinnedMeshRenderer);
+}
+registerTypes();

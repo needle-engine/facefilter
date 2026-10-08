@@ -24,6 +24,7 @@ await check("Unity version and npm definition match the npm package", async () =
     assert.equal(definition.packageName, manifest.name);
     assert.equal(definition.packageVersion, manifest.version);
     assert.equal(definition.localPath, "..");
+    assert.equal(definition.allowCodegen, false, "Use shipped Unity wrappers, not automatic regeneration of runtime-only classes");
 });
 
 await check("renamed Unity manager preserves its 1.x script identity and migration metadata", async () => {
@@ -36,6 +37,9 @@ await check("renamed Unity manager preserves its 1.x script identity and migrati
     assert.ok(partial.includes('sourceNamespace: "Needle.Typescript.GeneratedComponents"'));
     assert.ok(partial.includes('sourceClassName: "NeedleFilterTrackingManager"'));
     const registration = await read("codegen/register_types.ts");
+    const names = [...registration.matchAll(/TypeStore\.add\("([^"]+)"/g)].map(match => match[1]);
+    assert.equal(new Set(names).size, names.length, "Duplicate runtime component registrations");
+    assert.doesNotMatch(registration, /from ["']\.\.\/(?:lib|dist)\//, "Source registration must not import compiled copies");
     assert.match(registration, /TypeStore\.add\("NeedleTrackingManager", NeedleTrackingManager\)/);
     assert.match(registration, /TypeStore\.add\("HandTrackingBehaviour", HandTrackingBehaviour\)/);
 });

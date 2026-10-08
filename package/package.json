@@ -26,14 +26,15 @@
     "@mediapipe/tasks-vision": "0.10.14"
   },
   "peerDependencies": {
-    "three": ">=0.169.19 <0.186.0 || >=0.185.2-alpha.0 <0.186.0"
+    "three": "npm:@needle-tools/three@0.169.19"
   },
   "devDependencies": {
     "@needle-tools/engine": "5.1.14",
     "@types/three": "0.169.0",
     "esbuild": "0.28.2",
     "three": "npm:@needle-tools/three@0.169.19",
-    "typescript": "5.8.2"
+    "typescript": "5.8.2",
+    "vitest": "5.0.3"
   },
   "repository": {
     "type": "git",
@@ -53,8 +54,9 @@
     "dev": "npx nodemon --watch src --ext ts,tsx --exec \"npm run compile\"",
     "prepublishOnly": "npx --yes needle-publish-helper@next prepare-publish --verbose",
     "compile": "npx --yes needle-publish-helper compile-library",
-    "test": "node --experimental-strip-types --test tests/unit/*.test.mjs",
-    "test:release": "node tests/smoke-release.mjs"
+    "test": "vitest run",
+    "test:release": "node tests/smoke-release.mjs",
+    "test:watch": "vitest"
   },
   "keywords": [
     "needle",

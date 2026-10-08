@@ -1,5 +1,5 @@
 import { strict as assert } from "node:assert";
-import { test } from "node:test";
+import { test } from "vitest";
 import { Vector3, OrthographicCamera, Quaternion, Matrix4 } from "three";
 import { projectImageHandLandmark, cameraPalmNormal, measurePalmSize } from "../../src/hands/HandPose.ts";
 import { buildFingerBasis } from "../../src/hands/FingerPose.ts";

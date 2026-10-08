@@ -1,5 +1,5 @@
 import { strict as assert } from "node:assert";
-import { test } from "node:test";
+import { test } from "vitest";
 import { readFile } from "node:fs/promises";
 import { PerspectiveCamera, Quaternion, Vector3 } from "three";
 import { replayHandFrame } from "../replay-hand-frame.mjs";

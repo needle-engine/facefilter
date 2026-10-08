@@ -1,7 +1,19 @@
-# Hand tracking tests
+# Face-filter tests
 
 Use Node.js 24. From the `package` directory, run `npm ci` and `npm test`.
-The unit suite covers projection, orientation, scale, and recorded-pose regressions without a camera.
+The Vitest suite covers face registration and placement, hand projection, orientation,
+scale, attachment ownership, and recorded-pose regressions without a camera.
+
+```sh
+npm test                         # Run once (CI)
+npm run test:watch               # Watch during development
+npm test -- face-placement      # Select a test file
+npm test -- -t "opening"          # Select test names
+```
+
+The Node environment needs no browser or Unity. Runtime tests execute the production
+manager and components with browser/ML host services stubbed. They do not run MediaPipe
+inference or verify camera-image alignment.
 
 Replay a debug capture with:
 

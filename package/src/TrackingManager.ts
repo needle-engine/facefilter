@@ -2,7 +2,7 @@ import { HandCameraCalibration } from "./hands/HandCameraCalibration.js";
 import { HandLandmarkFilter } from "./hands/HandLandmarkFilter.js";
 import { HandRotationFilter, type HandRotationFilterOptions } from "./hands/HandRotationFilter.js";
 import { HandPoseStabilizer } from "./hands/HandPoseStabilizer.js";
-import { HandAttachmentFit, type HandAttachmentAutoFit } from "./hands/HandAttachmentFit.js";
+import { HandAttachmentFit, type HandAttachmentAutoFit, type HandAutoFitStatus } from "./hands/HandAttachmentFit.js";
 import { Application, AssetReference, Behaviour, ClearFlags, GameObject, getIconElement, getParam, getTempVector, Gizmos, instantiate, isDevEnvironment, isMobileDevice, Mathf, ObjectUtils, PromiseAllWithErrors, serializable, setParamWithoutReload, showBalloonMessage, showBalloonWarning, Vec3 } from '@needle-tools/engine';
 import { FaceLandmarker, DrawingUtils, FaceLandmarkerResult, PoseLandmarker, PoseLandmarkerResult, ImageSegmenter, ImageSegmenterResult, Matrix, HandLandmarker, HandLandmarkerResult } from "@mediapipe/tasks-vision";
 import { BlendshapeName, FacefilterUtils, MediapipeHelper } from './utils.js';
@@ -21,7 +21,7 @@ const debug = getParam("debugfilter") === true || debugHands;
 declare type VideoClip = string;
 
 /**
- * Use the NeedleFilterTrackingManager to track faces and apply filters to them
+ * Track faces and hands. See handProjection before integrating an existing scene camera.
  */
 export class NeedleTrackingManager extends Behaviour {
 
@@ -29,9 +29,23 @@ export class NeedleTrackingManager extends Behaviour {
     private static _instance: NeedleTrackingManager | null = null;
 
     /** Auto uses image-space rendering in hand-only scenes. Perspective keeps
-     * scene-camera integration for applications with calibrated 3D content.
+     * scene-camera integration and estimates its FOV. Scene leaves the application
+     * camera and FOV unchanged; the application owns its calibration.
      */
-    handProjection: "auto" | "perspective" = "auto";
+    handProjection: "auto" | "perspective" | "scene" = "auto";
+    /** Lightweight snapshot: no landmark arrays or scene objects. */
+    get handTrackingStatus() {
+        return {
+            camera: this._video?.readyState && this._video.readyState >= 2 ? "ready" as const : "waiting" as const,
+            detector: this.maxHands <= 0 ? "disabled" as const : this._handTrackingError?.startsWith("detector:") ? "error" as const : !this._handlandmarker ? "waiting" as const
+                : this._handlandmarker instanceof Promise ? "loading" as const : "ready" as const,
+            error: this._handTrackingError,
+            projection: this.usesImageHandProjection ? "image" as const : "scene" as const,
+            ownsCamera: this.usesImageHandProjection,
+            trackedHands: this._hands.filter(hand => hand.isTracked).length,
+        };
+    }
+    private _handTrackingError: string | null = null;
     private _handImageCamera: OrthographicCamera | null = null;
     private _handImageSource: ThreeCamera | null = null;
     get usesImageHandProjection(): boolean { return this.context.mainCamera === this._handImageCamera; }
@@ -389,7 +403,7 @@ export class NeedleTrackingManager extends Behaviour {
      * @returns an array of the active face objects, these hold a reference to the face instance
      * @example
      * ```ts
-     * const faces = manager.getActiveFaceObjects();
+     * const faces = manager.faces;
      * for(const face of faces) {
      *   // access the face index
      *   console.log(face.faceIndex);
@@ -548,6 +562,7 @@ export class NeedleTrackingManager extends Behaviour {
         const constraints = { video: true, audio: false };
         console.debug("Requesting camera access...");
         const stream = await navigator.mediaDevices.getUserMedia(constraints).catch((e) => {
+            this._handTrackingError = `camera: ${e.message}`;
             console.error("[Needle Tracking] Could not start camera: " + e.message);
             return null;
         });
@@ -559,6 +574,7 @@ export class NeedleTrackingManager extends Behaviour {
             if (isDevEnvironment()) showBalloonWarning("Could not start camera. Perhaps you need to allow camera access?");
             return;
         }
+        this._handTrackingError = null;
         console.debug("Camera access granted");
         video.srcObject = stream;
         video.muted = true;
@@ -696,9 +712,18 @@ export class NeedleTrackingManager extends Behaviour {
         // Ensure hand landmarker is created if max hands is > 0
         if (this.maxHands > 0 && !this._handlandmarker) {
             this._appliedMaxHands = this.maxHands;
+            if (this._handTrackingError?.startsWith("detector:")) this._handTrackingError = null;
             this._handlandmarker = MediapipeHelper.createHandLandmarker({
                 maxHands: this.maxHands
-            }).then(res => this._handlandmarker = res);
+            }).then(res => {
+                this._handTrackingError = null;
+                return this._handlandmarker = res;
+            }).catch(error => {
+                this._handTrackingError = `detector: ${error instanceof Error ? error.message : String(error)}`;
+                // Keep the failed promise until disabled/re-enabled; avoid a download retry every frame.
+                console.error("[Hand tracking]", error);
+                return null;
+            });
         }
         // Close the hand landmarker if max hands is 0
         else if (this.maxHands <= 0 && this._handlandmarker) {
@@ -744,8 +769,10 @@ export class NeedleTrackingManager extends Behaviour {
                 this._lastImageSegmentationResults = this._imageSegmentation.segmentForVideo(this._video, performance.now());
             }
             else this._lastImageSegmentationResults = null;
+            if (this._handTrackingError?.startsWith("frame:")) this._handTrackingError = null;
         }
         catch (err) {
+            this._handTrackingError = `frame: ${err instanceof Error ? err.message : String(err)}`;
             console.error("Error while processing video frame", err);
         }
 
@@ -757,12 +784,14 @@ export class NeedleTrackingManager extends Behaviour {
     /** @internal */
     onBeforeRender(): void {
         this.updateHandCamera();
-        if (!this.usesImageHandProjection) this.updateHandCameraCalibration();
+        if (!this.usesImageHandProjection && this.handProjection !== "scene") this.updateHandCameraCalibration();
 
         // Video rendering and hand reconstruction must use the same FOV.
         if (this.context.mainCameraComponent) {
-            this.context.mainCameraComponent.fieldOfView = this.cameraVerticalFov;
-            this.context.mainCameraComponent.clearFlags = ClearFlags.None;
+            if (this.handProjection !== "scene") {
+                this.context.mainCameraComponent.fieldOfView = this.cameraVerticalFov;
+                this.context.mainCameraComponent.clearFlags = ClearFlags.None;
+            }
             this._videoRenderer?.onUpdate();
         }
 
@@ -1257,7 +1286,23 @@ const _handUp = new Vector3();
 const _handRotationMatrix = new Matrix4();
 const _handRotation = new Quaternion();
 
+export type HandAttachmentStatus = {
+    state: "attached" | "detached";
+    tracked: boolean;
+    anchorVisible: boolean;
+    /** Object flag only. This does not assert pixel visibility, frustum inclusion, or lack of occlusion. */
+    objectVisible: boolean;
+    autoFit: HandAutoFitStatus | null;
+};
+export type HandAttachmentHandle = {
+    readonly object: Object3D;
+    readonly status: HandAttachmentStatus;
+    dispose(): void;
+};
+
 export class HandInstance implements ITrackingInstance {
+    private static readonly owners = new WeakMap<Object3D, HandAttachmentHandle>();
+    private readonly _attachments = new Map<Object3D, HandAttachmentHandle>();
     readonly manager: NeedleTrackingManager;
     readonly handedness: string;
     get context() { return this.manager.context; }
@@ -1326,23 +1371,26 @@ export class HandInstance implements ITrackingInstance {
         return anchor.object;
     }
 
-    /** Attach an object to a joint. The package handles position, rotation and camera parenting. */
-    attachToHand(obj: Object3D, point: HandAttachmentPoint, opts: HandAttachmentOption = {}): void {
-        const smoothKey = `attachment:${obj.uuid}`;
-        const previous = this._anchors.get(smoothKey);
-        if (previous) { previous.object.removeFromParent(); this._anchors.delete(smoothKey); }
-        if (opts.rotationSmoothing && opts.rotationSmoothing > 0) {
-            // Dedicated anchor: smoothing one attachment must not alter raw
-            // joint anchors, the skin, or another attachment at this point.
-            const object = new Object3D();
-            object.name = `Hand ${this.handedness} smoothed ${obj.name}`;
-            object.visible = false;
-            object.add(obj);
-            this._anchors.set(smoothKey, { point, object, rotationFilter: new HandRotationFilter(), rotationSmoothing: opts.rotationSmoothing, rotationOptions: opts.rotationFilter });
-        }
-        else this.getJoint(point).add(obj);
+    /** Attach a loaded object. Returns an idempotent cleanup handle; caller owns asset resources. */
+    attachToHand(obj: Object3D, point: HandAttachmentPoint, opts: HandAttachmentOption = {}): HandAttachmentHandle {
+        const names = typeof point === "string" ? [point] : [point.p0, point.p1];
+        if (names.some(name => MediapipeHelper.getJointIndex(name) < 0) ||
+            (typeof point !== "string" && !Number.isFinite(point.t01)))
+            throw new Error("Invalid hand attachment point: use named hand joints and a finite t01.");
+        if (opts.offset && ![opts.offset.x, opts.offset.y, opts.offset.z].every(Number.isFinite))
+            throw new Error("Hand attachment offset must be finite.");
+        if (opts.autoFit && opts.autoFit.innerRadius !== undefined && (!(opts.autoFit.innerRadius > 0) || !Number.isFinite(opts.autoFit.innerRadius)))
+            throw new Error("Hand attachment autoFit.innerRadius must be a positive radius in metres.");
+        HandInstance.owners.get(obj)?.dispose();
+        const key = `attachment:${obj.uuid}`;
+        const object = new Object3D();
+        object.name = `Hand ${this.handedness} attachment ${obj.name}`;
+        object.visible = false;
+        object.add(obj);
+        this._anchors.set(key, {point, object,
+            rotationFilter: opts.rotationSmoothing && opts.rotationSmoothing > 0 ? new HandRotationFilter() : undefined,
+            rotationSmoothing: opts.rotationSmoothing, rotationOptions: opts.rotationFilter});
         obj.position.set(opts.offset?.x ?? 0, opts.offset?.y ?? 0, opts.offset?.z ?? 0);
-        this._attachmentFits.delete(obj);
         if (opts.autoFit) {
             const name = typeof point === "string" ? point : point.p0;
             const finger = name.startsWith("pinky") ? "pinky-finger"
@@ -1350,8 +1398,46 @@ export class HandInstance implements ITrackingInstance {
             const segment = name.endsWith("_cmc") ? "metacarpal"
                 : name.endsWith("_pip") ? "phalanx-intermediate"
                 : name.endsWith("_dip") || name.endsWith("_ip") || name.endsWith("_tip") ? "phalanx-distal" : "phalanx-proximal";
-            this._attachmentFits.set(obj, new HandAttachmentFit(obj, opts.autoFit, finger, segment, this.getJoint(point)));
+            const measurement = new Object3D();
+            measurement.visible = false;
+            this._anchors.set(key + ":measurement", {point, object: measurement});
+            this._attachmentFits.set(obj, new HandAttachmentFit(obj, opts.autoFit, finger, segment, measurement));
         }
+        let detached = false;
+        const handle: HandAttachmentHandle = {
+            object: obj,
+            get status(): HandAttachmentStatus {
+                if (detached) return {state: "detached", tracked: false, anchorVisible: false, objectVisible: obj.visible, autoFit: null};
+                return owner.getAttachmentStatus(obj)!;
+            },
+            dispose: () => {
+                if (detached) return;
+                detached = true;
+                this._attachmentFits.get(obj)?.restore();
+                this._attachmentFits.delete(obj);
+                if (obj.parent === object) obj.removeFromParent();
+                object.removeFromParent();
+                this._anchors.get(key + ":measurement")?.object.removeFromParent();
+                this._anchors.delete(key + ":measurement");
+                this._anchors.delete(key);
+                this._attachments.delete(obj);
+                if (HandInstance.owners.get(obj) === handle) HandInstance.owners.delete(obj);
+            },
+        };
+        const owner = this;
+        this._attachments.set(obj, handle);
+        HandInstance.owners.set(obj, handle);
+        return handle;
+    }
+
+    /** Detach without destroying the object's geometry, materials, or textures. */
+    detachFromHand(object: Object3D): void { this._attachments.get(object)?.dispose(); }
+
+    getAttachmentStatus(object: Object3D): HandAttachmentStatus | null {
+        if (!this._attachments.has(object)) return null;
+        const anchor = this._anchors.get(`attachment:${object.uuid}`)?.object;
+        return {state: "attached", tracked: this.isTracked, anchorVisible: !!anchor?.visible,
+            objectVisible: object.visible, autoFit: this._attachmentFits.get(object)?.status ?? null};
     }
 
     /** Camera-local position of a detected joint, using MediaPipe image XYZ. */
@@ -1510,6 +1596,7 @@ export class HandInstance implements ITrackingInstance {
 
     dispose(): void {
         this.remove();
+        for (const handle of [...this._attachments.values()]) handle.dispose();
         for (const { object } of this._anchors.values()) object.removeFromParent();
         for (const object of this._debugObjects) object.removeFromParent();
         this._anchors.clear();

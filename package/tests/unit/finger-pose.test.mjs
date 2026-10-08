@@ -1,5 +1,5 @@
 import { strict as assert } from "node:assert";
-import { test } from "node:test";
+import { test } from "vitest";
 import { Vector3 } from "three";
 import { buildFingerBasis } from "../../src/hands/FingerPose.ts";
 import { worldPalmNormal } from "../../src/hands/HandPose.ts";

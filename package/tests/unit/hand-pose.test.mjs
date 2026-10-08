@@ -1,5 +1,5 @@
 import { strict as assert } from "node:assert";
-import { test } from "node:test";
+import { test } from "vitest";
 import { estimateHandDepth, estimateHandProjection, HandScaleReference, measurePalmSize, projectHandLandmark, cameraPalmNormal, fingerBendWeight, imageFingerDirection, worldPalmNormal } from "../../src/hands/HandPose.ts";
 
 const width = 1280, height = 720, fov = 63;

@@ -103,7 +103,7 @@ and response controls and records their settings with the ring quaternion.
 `autoFit` is off by default. For a circular ring opening, enable it with:
 
 ```ts
-const fit = { enabled: true, innerRadius: 0.01, halfWidth: 0.002, clearance: 0.0005 };
+const fit = { enabled: true, halfWidth: 0.002, clearance: 0.0005 };
 hand.attachToHand(ring, {
   p0: "ring_finger_mcp", p1: "ring_finger_pip", t01: 0.75,
 }, { autoFit: fit });
@@ -111,9 +111,16 @@ hand.attachToHand(ring, {
 fit.enabled = false;
 ```
 
-Set `innerRadius` to the opening radius in metres **at the object's initial
-scale**, excluding decorations. Center the opening at the object origin and
-orient its hole axis along the attachment's +Z axis before attaching it.
+Omit `innerRadius` to measure the loaded rigid mesh's circular opening and center
+automatically. Orient its hole axis along the attachment's +Z axis and set the
+initial model scale before attaching. Measurement uses nested closed mesh
+cross-sections, excluding the ornament's bounding box. It runs once per attachment.
+Unsupported, ambiguous, skinned, or instanced assets report `invalid-geometry`;
+they keep their initial transform. Inspect the returned handle's `status.autoFit`.
+
+For unsupported assets, supply `innerRadius` in metres **at the initial object
+scale**, excluding decorations, and center the opening at the object origin.
+Reattach after replacing the asset or changing its initial orientation/scale.
 `halfWidth` is the axial sampling distance on either side of the center plane.
 The fitter uses the current `HandTrackingBehaviour` skin for the same hand,
 restricts triangles to the attached finger segment and selects the closed
@@ -309,6 +316,11 @@ Recordings identify this mode as `mediapipe-image-orthographic`, with
 to image units; `estimatedDepth` is an inverse apparent scale, not a measured
 distance. Debug mode displays ?Projection: image space (no camera calibration)?.
 
+To preserve the application's camera, FOV, and clear flags, use
+`manager.handProjection = "scene"`. Your application owns camera calibration and
+video alignment in this mode. Switching out of image mode restores the previous
+camera when it is still owned by this manager.
+
 Applications that need the existing scene-camera integration can opt into
 `manager.handProjection = "perspective"`. Mixed face/hand tracking also retains
 perspective projection. The experimental MediaPipe FOV estimator applies only
@@ -338,3 +350,84 @@ references to the new name; replace `getActiveFaceObjects()` with `.faces`.
 Re-export existing scenes for the new runtime type registration. Previously
 exported web scenes using the old component name must not be paired with the
 2.x runtime without migration.
+
+
+## Hand attachment integration reference
+
+### Coordinate and ownership contract
+
+| Item | Contract |
+| --- | --- |
+| Hand identity | `getHand("Left")` / `getHand("Right")` returns a persistent handle; check `isTracked` for current availability. |
+| Placement | `{ p0, p1, t01 }` interpolates between named joints. Use 0?1 for points inside a segment. The ring demo uses MCP ? PIP at 0.75. |
+| Anchor axes | +Z follows the finger segment, +Y points toward its pad, +X completes the orthogonal frame. |
+| Asset transform | Set rotation and scale before attaching. `offset` sets local position in anatomical metres. Image projection converts this scale to image units. |
+| Pose units | Image-mode joint positions are camera-relative image units, not physical metres. Relative depth supports ordering, not measured camera distance. |
+| Autofit | Requires an active `HandTrackingBehaviour` skin for the same hand; only the selected finger segment contributes. |
+| Tracking loss | Owned anchors hide automatically and recover on reacquisition. Do not disable the owning tracking component. |
+| Cleanup | `handle.dispose()` or `hand.detachFromHand(object)` detaches the asset and releases its private anchors/filter. Disposal is idempotent. |
+| Resources | The caller owns asset geometry/materials/textures. Detaching does not dispose shared resources or restore the former parent. Autofit restores its initial position/scale. |
+| Reattachment | Attaching an object again disposes its old attachment, including when moving between hands. An old handle cannot detach a new attachment. |
+
+Use `attachToHand` for owned objects. `getJoint` exposes a shared anchor; treat
+that anchor and its placement descriptor as read-only. Attachment descriptors
+are retained, so an application's slider can update `t01` directly.
+
+### Diagnostics
+
+- `manager.handTrackingStatus`: video readiness, detector state, error string,
+  projection mode, camera ownership, and tracked hand count.
+- `hand.trackingDiagnostics`: accepted/predicted/rejected pose state and reason,
+  plus raw/rendered arrays for debug recording. Avoid polling these arrays for a status label.
+- `handle.status` or `hand.getAttachmentStatus(object)`: attachment ownership,
+  tracking, anchor/object visibility flags, and autofit status. Visibility flags
+  do not guarantee visible pixels: clipping and occlusion still apply.
+- `status.autoFit`: measured/explicit radius, last scale multiplier, state, and
+  reason (`no-mesh`, `no-section`, `oversized`, `invalid-geometry`, etc.). Missing
+  or rejected sections retain the last valid fit; no geometry is enlarged to match another finger.
+
+Asset loading is separate from tracking. Await the loader and handle rejection
+before attaching. A loaded asset may still be waiting for the first tracked hand.
+
+### Example: load, track, inspect, and detach
+
+The repository's `src/ringDemo.ts` is the complete two-hand example, including
+asset orientation, loading failures, snapshots, and `dispose()`. For a model
+already authored with its opening along Z:
+
+```ts
+import { AssetReference } from "@needle-tools/engine";
+import type { NeedleTrackingManager } from "@needle-tools/facefilter";
+
+export async function attachRing(manager: NeedleTrackingManager, url: string) {
+  const object = await AssetReference.getOrCreateFromUrl(url, manager.context).instantiate();
+  if (!object) throw new Error("Ring asset failed to load");
+  // Set model rotation and initial metre scale here, before measurement.
+  const hand = manager.getHand("Left");
+  const handle = hand.attachToHand(object, {
+    p0: "ring_finger_mcp", p1: "ring_finger_pip", t01: 0.75,
+  }, { autoFit: {}, rotationSmoothing: 0.12 });
+  return {
+    object,
+    get status() { return handle.status; },
+    dispose() { handle.dispose(); },
+  };
+}
+```
+
+Call this from your component's async setup; show a loading state while awaiting
+it and an error state on rejection. Read `status.tracked` for waiting/tracking
+UI. Call `dispose()` when removing the example. If setup completes after your
+component was destroyed, dispose the returned attachment immediately.
+Configure the manager and add the hand skin explicitly in the owning scene.
+This helper does not change face/hand limits or select a camera mode.
+
+
+### Local Unity package development
+
+When a local npm definition points at this package, disable **Allow Codegen**
+(`"allowCodegen": false`). The installed `com.needle.face-filter` package already
+supplies the C# components and stable script GUIDs. Regenerating a second set in
+Assets can create invalid wrappers for runtime-only classes such as `HandInstance`
+and conflict with the supplied components. Remove unreferenced duplicate generated
+wrappers from Assets after disabling generation; retain the shipped Unity package.

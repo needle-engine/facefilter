@@ -1,5 +1,5 @@
 import { strict as assert } from "node:assert";
-import { test } from "node:test";
+import { test } from "vitest";
 import { HandCameraCalibration } from "../../src/hands/HandCameraCalibration.ts";
 
 const world = Array.from({length:21}, (_,i) => ({x:((i%4)-1.5)*.023, y:(Math.floor(i/4)-2.5)*.027, z:Math.sin(i*1.7)*.027}));

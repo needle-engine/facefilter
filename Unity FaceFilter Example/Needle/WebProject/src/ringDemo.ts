@@ -1,36 +1,39 @@
 import { AssetReference } from "@needle-tools/engine";
-import { NeedleTrackingManager } from "@needle-tools/facefilter";
+import { NeedleTrackingManager, type HandAttachmentHandle } from "@needle-tools/facefilter";
 import { Group, Matrix4, Quaternion, Vector3 } from "three";
 
 const ringUrl = "https://cloud.needle.tools/-/assets/Z23hmXB12yGTI-ZAqHd0-optimized/file.glb";
-// Measured from the decoded asset's circular band, excluding its ornament.
-const openingCenterY = -.14643228;
+// Initial display size only; the opening radius and center are measured by autoFit.
 const originalOuterDiameter = 1.70714998;
 
 export async function addDemoRings(manager: NeedleTrackingManager) {
     const asset = AssetReference.getOrCreateFromUrl(ringUrl, manager.context);
-    const autoFit = { enabled: true, innerRadius: .7705864 * .022 / originalOuterDiameter, halfWidth: .0025, clearance: .0005 };
+    const autoFit = { enabled: true, halfWidth: .0025, clearance: .0005 };
     const rotationSmoothing = .12;
     const rotationFilter = { minCutoff: 5, beta: 1.5, derivativeCutoff: 1, mode: "twist" as const };
     const rings = new Map<string, Group>();
     const attachments: Array<{ p0: "ring_finger_mcp"; p1: "ring_finger_pip"; t01: number }> = [];
-    for (const side of ["Left", "Right"] as const) {
-        const model = await asset.instantiate();
-        if (!model) throw new Error("The ring asset could not be loaded.");
-        const ring = new Group();
-        ring.name = `${side} ring demo`;
-        rings.set(side, ring);
-        ring.add(model);
-        // Center the opening, not the ornament-inclusive bounding box.
-        model.position.y -= openingCenterY;
-        ring.rotation.set(0, Math.PI / 2, Math.PI);
-        ring.scale.setScalar(.022 / originalOuterDiameter);
-        const point = { p0: "ring_finger_mcp", p1: "ring_finger_pip", t01: .75 } as const;
-        // Hand anchors read this interpolation value every tracking frame.
-        attachments.push(point);
-        manager.getHand(side).attachToHand(ring, point, { autoFit, rotationSmoothing, rotationFilter });
-    }
+    const handles: HandAttachmentHandle[] = [];
+    const dispose = () => { for (const handle of handles) handle.dispose(); rings.clear(); };
+    try {
+        for (const side of ["Left", "Right"] as const) {
+            const model = await asset.instantiate();
+            if (!model) throw new Error("The ring asset could not be loaded.");
+            const ring = new Group();
+            ring.name = `${side} ring demo`;
+            rings.set(side, ring);
+            ring.add(model);
+            ring.rotation.set(0, Math.PI / 2, Math.PI);
+            ring.scale.setScalar(.022 / originalOuterDiameter);
+            const point = { p0: "ring_finger_mcp", p1: "ring_finger_pip", t01: .75 } as const;
+            // Hand anchors read this interpolation value every tracking frame.
+            attachments.push(point);
+            handles.push(manager.getHand(side).attachToHand(ring, point, { autoFit, rotationSmoothing, rotationFilter }));
+        }
+    } catch (error) { dispose(); throw error; }
     return {
+        dispose,
+        get statuses() { return handles.map(handle => handle.status); },
         getSnapshot(side: string) {
             const ring = rings.get(side);
             if (!ring) return undefined;

@@ -1,4 +1,4 @@
-import { test } from "node:test";
+import { test } from "vitest";
 import { strict as assert } from "node:assert";
 import { getHandProjectionIssue } from "../../src/hands/HandPose.ts";
 import { HandPoseStabilizer } from "../../src/hands/HandPoseStabilizer.ts";

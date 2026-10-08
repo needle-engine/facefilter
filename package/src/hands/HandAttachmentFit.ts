@@ -1,11 +1,12 @@
+import { measureRingOpening } from "./RingOpening.js";
 import { Matrix4, Object3D, SkinnedMesh, Vector3 } from "three";
 
 /** Fit a circular opening to the tracked finger surface. Off unless supplied. */
 export type HandAttachmentAutoFit = {
     /** Set false to restore the attachment's original position and scale. */
     enabled?: boolean;
-    /** Opening radius in metres at the object's initial scale. */
-    innerRadius: number;
+    /** Opening radius at initial scale in anatomical metres. Omit to measure a rigid circular band aligned to Z. */
+    innerRadius?: number;
     /** Surface clearance in metres. Default 0.0005 (0.5 mm). */
     clearance?: number;
     /** Half the band's axial width in metres. Default 0 (one cross-section). */
@@ -14,6 +15,15 @@ export type HandAttachmentAutoFit = {
     maxScale?: number;
     /** Time constant in seconds for fit offset/scale smoothing. Default 0.08; 0 disables it. */
     smoothing?: number;
+};
+
+export type HandAutoFitStatus = {
+    state: "waiting" | "fitted" | "held" | "disabled";
+    reason: "not-updated" | "no-mesh" | "no-section" | "oversized" | "invalid-geometry" | "detached" | null;
+    source: "measured" | "explicit";
+    innerRadius: number | null;
+    /** Last applied multiplier, relative to the original asset scale. */
+    scale: number;
 };
 
 /** CPU surface slices, in anchor space. Runs after the current hand skin pose. */
@@ -29,6 +39,19 @@ export class HandAttachmentFit {
     private readonly center = new Vector3();
     private readonly segments: Vector3[] = [];
     private applied = false;
+    private readonly assetCenter = new Vector3();
+    private readonly innerRadius: number;
+    private _status: HandAutoFitStatus;
+    get status(): HandAutoFitStatus { return { ...this._status }; }
+    /** Restore the caller's transform without disposing shared geometry or materials. */
+    restore(): void {
+        this.object.scale.copy(this.originalScale);
+        this.object.position.copy(this.originalPosition);
+        this.applied = false;
+    }
+    private hold(reason: HandAutoFitStatus["reason"]): void {
+        this._status = { ...this._status, state: this.applied ? "held" : "waiting", reason };
+    }
 
     readonly object: Object3D;
     readonly options: HandAttachmentAutoFit;
@@ -41,8 +64,13 @@ export class HandAttachmentFit {
         this.measurementAnchor = measurementAnchor;
         this.options = options;
         this.boneName = `${finger}-${segment}`;
-        if (!(options.innerRadius > 0) || !Number.isFinite(options.innerRadius))
+        const measurement = options.innerRadius === undefined ? measureRingOpening(object) : null;
+        this.innerRadius = options.innerRadius ?? measurement?.innerRadius ?? NaN;
+        if (options.innerRadius !== undefined && (!(options.innerRadius > 0) || !Number.isFinite(options.innerRadius)))
             throw new Error("Hand attachment autoFit.innerRadius must be a positive radius in metres.");
+        if (measurement) this.assetCenter.copy(measurement.center);
+        this._status = { state: "waiting", reason: Number.isFinite(this.innerRadius) ? "not-updated" : "invalid-geometry",
+            source: options.innerRadius === undefined ? "measured" : "explicit", innerRadius: Number.isFinite(this.innerRadius) ? this.innerRadius : null, scale: 1 };
         this.originalScale = object.scale.clone();
         this.originalPosition = object.position.clone();
     }
@@ -54,10 +82,12 @@ export class HandAttachmentFit {
                 this.object.position.copy(this.originalPosition);
                 this.applied = false;
             }
+            this._status = { ...this._status, state: "disabled", reason: null, scale: 1 };
             return;
         }
+        if (!Number.isFinite(this.innerRadius)) { this.hold("invalid-geometry"); return; }
         const anchor = this.object.parent;
-        if (!anchor) return;
+        if (!anchor) { this.hold("detached"); return; }
         anchor.updateWorldMatrix(true, false);
         this.anchorInverse.copy(anchor.matrixWorld).invert();
         // Measure perpendicular to the current finger, independently of the
@@ -122,7 +152,7 @@ export class HandAttachmentFit {
             }
         }
         // Missing mesh/section: retain the last valid fit, never collapse it.
-        if (count < 6) return;
+        if (count < 6) { this.hold(meshes.some(mesh => mesh.visible) ? "no-section" : "no-mesh"); return; }
         let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
         for (let i = 0; i < count; i++) {
             const p = this.intersections[i];
@@ -136,17 +166,19 @@ export class HandAttachmentFit {
             radius = Math.max(radius, Math.hypot(p.x - this.center.x, p.y - this.center.y));
         }
         const clearance = Math.max(0, this.options.clearance ?? .0005);
-        const factor = (radius + clearance) / this.options.innerRadius;
-        if (!Number.isFinite(factor) || factor <= 0 || factor > (this.options.maxScale ?? 2)) return;
+        const factor = (radius + clearance) / this.innerRadius;
+        if (!Number.isFinite(factor) || factor <= 0 || factor > (this.options.maxScale ?? 2)) { this.hold("oversized"); return; }
         const smoothing = this.options.smoothing ?? .08;
         const blend = !this.applied || smoothing <= 0 ? 1 : 1 - Math.exp(-Math.max(0, deltaTime) / smoothing);
         this.targetScale.copy(this.originalScale).multiplyScalar(factor);
         // The fitted center belongs to the measurement frame; the object is
         // parented to the independently smoothed rendering frame.
         this.center.applyMatrix4(measurementAnchor.matrixWorld).applyMatrix4(this.anchorInverse);
+        this.center.addScaledVector(this.assetCenter, -factor);
         this.object.position.lerp(this.center, blend);
         this.object.scale.lerp(this.targetScale, blend);
         this.applied = true;
+        this._status = { ...this._status, state: "fitted", reason: null, scale: this.originalScale.x ? this.object.scale.x / this.originalScale.x : factor };
     }
 }
 

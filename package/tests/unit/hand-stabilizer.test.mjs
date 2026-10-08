@@ -1,5 +1,5 @@
 import { strict as assert } from "node:assert";
-import { test } from "node:test";
+import { test } from "vitest";
 import { Vector3 } from "three";
 import { HandPoseStabilizer } from "../../src/hands/HandPoseStabilizer.ts";
 const pose = () => {

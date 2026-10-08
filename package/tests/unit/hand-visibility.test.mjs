@@ -1,5 +1,5 @@
 import { strict as assert } from "node:assert";
-import { test } from "node:test";
+import { test } from "vitest";
 import { readFile } from "node:fs/promises";
 import { transform } from "esbuild";
 import { Group, Mesh, PerspectiveCamera, OrthographicCamera } from "three";
