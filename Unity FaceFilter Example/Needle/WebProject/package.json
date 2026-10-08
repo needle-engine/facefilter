@@ -13,7 +13,7 @@
 	  "@needle-tools/facefilter": "file:./../../../package"
 	},
   "devDependencies": {
-	  "@needle-tools/helper": "1.11.5",
+	  "@needle-tools/helper": "2.0.0",
 	  "@types/three": "0.169.0",
 	  "@vitejs/plugin-basic-ssl": "2.3.0",
 	  "typescript": "^5.0.4",

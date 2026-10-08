@@ -1,0 +1,611 @@
+{
+  "version": 1.1,
+  "tags": [
+    {
+      "name": "needle-menu",
+      "description": "`The <needle-menu>` web component. A lightweight cross-platform menu that contains built-in functionality and can be extended.\n\nThis element is intended as an internal UI primitive for hosting application\nmenus and buttons. Use the higher-level `NeedleMenu` API from the engine\ncode to manipulate it programmatically.\n\n![Needle Engine Logo](data:image/svg+xml;base64,PHN2ZyB2ZXJzaW9uPSIxLjIiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgdmlld0JveD0iMCAwIDE4IDEwIiB3aWR0aD0iMTgiIGhlaWdodD0iMTAiPgoJPGRlZnM+CgkJPGxpbmVhckdyYWRpZW50IGlkPSJnMSIgeDI9IjEiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIiBncmFkaWVudFRyYW5zZm9ybT0ibWF0cml4KC4wNDUsLTguNjgsMS4xMzUsLjAwNiw5LjU0OSw5Ljg0NCkiPgoJCQk8c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9IiM2MmQzOTkiLz4KCQkJPHN0b3Agb2Zmc2V0PSIuNTEiIHN0b3AtY29sb3I9IiNhY2Q4NDIiLz4KCQkJPHN0b3Agb2Zmc2V0PSIuOSIgc3RvcC1jb2xvcj0iI2Q3ZGIwYSIvPgoJCQk8c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiNkN2RiMGEiLz4KCQk8L2xpbmVhckdyYWRpZW50PgoJCTxsaW5lYXJHcmFkaWVudCBpZD0iZzIiIHgyPSIxIiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSIgZ3JhZGllbnRUcmFuc2Zvcm09Im1hdHJpeCgtMC4wODUsLTguNjM2LDEuMTI0LC0wLjAxMSw4LjQ4Niw5LjUyOSkiPgoJCQk8c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9IiMwYmEzOTgiLz4KCQkJPHN0b3Agb2Zmc2V0PSIuNSIgc3RvcC1jb2xvcj0iIzRjYTM1MiIvPgoJCQk8c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiM3NmEzMGEiLz4KCQk8L2xpbmVhckdyYWRpZW50PgoJCTxsaW5lYXJHcmFkaWVudCBpZD0iZzMiIHgyPSIxIiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSIgZ3JhZGllbnRUcmFuc2Zvcm09Im1hdHJpeCgtMC4xMDEsLTMuNjIxLDEuMDI4LC0wLjAyOSw2LjcyNCw4LjEwNSkiPgoJCQk8c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9IiMzNmEzODIiLz4KCQkJPHN0b3Agb2Zmc2V0PSIuMTkiIHN0b3AtY29sb3I9IiMzNmEzODIiLz4KCQkJPHN0b3Agb2Zmc2V0PSIuNTQiIHN0b3AtY29sb3I9IiM0OWE0NTkiLz4KCQkJPHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjNzZhMzBiIi8+CgkJPC9saW5lYXJHcmFkaWVudD4KCQk8bGluZWFyR3JhZGllbnQgaWQ9Imc0IiB4Mj0iMSIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiIGdyYWRpZW50VHJhbnNmb3JtPSJtYXRyaXgoLjExNiwtMy4zMjMsMS45MTgsLjA2Nyw1LjYxNyw4LjE2MikiPgoJCQk8c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9IiMyNjc4ODAiLz4KCQkJPHN0b3Agb2Zmc2V0PSIuNTEiIHN0b3AtY29sb3I9IiM0NTdhNWMiLz4KCQkJPHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjNzE3NTE2Ii8+CgkJPC9saW5lYXJHcmFkaWVudD4KCQk8bGluZWFyR3JhZGllbnQgaWQ9Imc1IiB4Mj0iMSIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiIGdyYWRpZW50VHJhbnNmb3JtPSJtYXRyaXgoLjczOCwtMy44MzMsMS4xMDEsLjIxMiwxMS45Nyw3LjIxNCkiPgoJCQk8c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9IiNiMGQ5MzkiLz4KCQkJPHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjZWFkYjA0Ii8+CgkJPC9saW5lYXJHcmFkaWVudD4KCQk8bGluZWFyR3JhZGllbnQgaWQ9Imc2IiB4Mj0iMSIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiIGdyYWRpZW50VHJhbnNmb3JtPSJtYXRyaXgoMS4zOTMsLTMuNDQ4LDEuODU3LC43NSwxMC40OTYsNi44MjYpIj4KCQkJPHN0b3Agb2Zmc2V0PSIwIiBzdG9wLWNvbG9yPSIjNzRhZjUyIi8+CgkJCTxzdG9wIG9mZnNldD0iLjE3IiBzdG9wLWNvbG9yPSIjNzRhZjUyIi8+CgkJCTxzdG9wIG9mZnNldD0iLjQ4IiBzdG9wLWNvbG9yPSIjOTliZTMyIi8+CgkJCTxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iI2MwYzQwYSIvPgoJCTwvbGluZWFyR3JhZGllbnQ+Cgk8L2RlZnM+Cgk8c3R5bGU+CgkJLnMwIHsgZmlsbDogdXJsKCNnMSkgfSAKCQkuczEgeyBmaWxsOiB1cmwoI2cyKSB9IAoJCS5zMiB7IGZpbGw6IHVybCgjZzMpIH0gCgkJLnMzIHsgZmlsbDogdXJsKCNnNCkgfSAKCQkuczQgeyBmaWxsOiAjOTljYzMzIH0gCgkJLnM1IHsgZmlsbDogdXJsKCNnNSkgfSAKCQkuczYgeyBmaWxsOiB1cmwoI2c2KSB9IAoJCS5zNyB7IGZpbGw6ICNmZmUxMTMgfSAKCQkuczggeyBmaWxsOiAjZjNlNjAwIH0gCgk8L3N0eWxlPgoJPGc+CgkJPGc+CgkJCTxwYXRoIGNsYXNzPSJzMCIgZD0ibTkgMS45N3Y4LjAzbDAuODMtMC43IDAuMzYtOC4zM3oiLz4KCQk8L2c+CgkJPGc+CgkJCTxwYXRoIGNsYXNzPSJzMSIgZD0ibTkgMS45NywtMS4xOS0xIDAuMzUgOC4zMyAwLjg0IDAuN3oiLz4KCQk8L2c+CgkJPGc+CgkJCTxwYXRoIGNsYXNzPSJzMiIgZD0ibTYuMTIgNS41OGwwLjQ2IDIuNjIgMC42Ni0wLjgtMC4xMy0zLjAxeiIvPgoJCTwvZz4KCQk8Zz4KCQkJPHBhdGggY2xhc3M9InMzIiBkPSJtNi4xMiA1LjU4bC0xLjM1LTAuNzcgMC45MSAyLjg3IDAuOSAwLjUyeiIvPgoJCTwvZz4KCQk8Zz4KCQkJPHBhdGggY2xhc3M9InM0IiBkPSJtNy4xMSA0LjM5bC0xLjM0LTAuNzctMSAxLjE5IDEuMzUgMC43N3oiLz4KCQk8L2c+CgkJPGc+CgkJCTxwYXRoIGNsYXNzPSJzNSIgZD0ibTExLjk2IDQuMTlsLTAuNTQgMy4wMSAwLjgzLTAuNDggMS4wNS0zLjMxeiIvPgoJCTwvZz4KCQk8Zz4KCQkJPHBhdGggY2xhc3M9InM2IiBkPSJtMTEuOTYgNC4xOWwtMS0xLjE5LTAuMTUgMy40NiAwLjYxIDAuNzR6Ii8+CgkJPC9nPgoJCTxnPgoJCQk8cGF0aCBjbGFzcz0iczciIGQ9Im0xMy4zIDMuNDFsLTEtMS4xOC0xLjM0IDAuNzcgMSAxLjE5eiIvPgoJCTwvZz4KCQk8Zz4KCQkJPHBhdGggY2xhc3M9InM4IiBkPSJtMTAuMTkgMC45N2wtMS4xOS0wLjk3LTEuMTkgMC45NyAxLjE5IDF6Ii8+CgkJPC9nPgoJPC9nPgo8L3N2Zz4=) _Needle Engine_",
+      "attributes": [],
+      "references": [
+        {
+          "name": "Needle Engine reference",
+          "url": "https://engine.needle.tools/docs/reference/needle-engine-attributes.html"
+        }
+      ]
+    },
+    {
+      "name": "needle-button",
+      "description": "A <needle-button> can be used to add VR, AR or Quicklook buttons to your website without having to write code.\n\n![Needle Engine Logo](data:image/svg+xml;base64,PHN2ZyB2ZXJzaW9uPSIxLjIiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgdmlld0JveD0iMCAwIDE4IDEwIiB3aWR0aD0iMTgiIGhlaWdodD0iMTAiPgoJPGRlZnM+CgkJPGxpbmVhckdyYWRpZW50IGlkPSJnMSIgeDI9IjEiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIiBncmFkaWVudFRyYW5zZm9ybT0ibWF0cml4KC4wNDUsLTguNjgsMS4xMzUsLjAwNiw5LjU0OSw5Ljg0NCkiPgoJCQk8c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9IiM2MmQzOTkiLz4KCQkJPHN0b3Agb2Zmc2V0PSIuNTEiIHN0b3AtY29sb3I9IiNhY2Q4NDIiLz4KCQkJPHN0b3Agb2Zmc2V0PSIuOSIgc3RvcC1jb2xvcj0iI2Q3ZGIwYSIvPgoJCQk8c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiNkN2RiMGEiLz4KCQk8L2xpbmVhckdyYWRpZW50PgoJCTxsaW5lYXJHcmFkaWVudCBpZD0iZzIiIHgyPSIxIiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSIgZ3JhZGllbnRUcmFuc2Zvcm09Im1hdHJpeCgtMC4wODUsLTguNjM2LDEuMTI0LC0wLjAxMSw4LjQ4Niw5LjUyOSkiPgoJCQk8c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9IiMwYmEzOTgiLz4KCQkJPHN0b3Agb2Zmc2V0PSIuNSIgc3RvcC1jb2xvcj0iIzRjYTM1MiIvPgoJCQk8c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiM3NmEzMGEiLz4KCQk8L2xpbmVhckdyYWRpZW50PgoJCTxsaW5lYXJHcmFkaWVudCBpZD0iZzMiIHgyPSIxIiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSIgZ3JhZGllbnRUcmFuc2Zvcm09Im1hdHJpeCgtMC4xMDEsLTMuNjIxLDEuMDI4LC0wLjAyOSw2LjcyNCw4LjEwNSkiPgoJCQk8c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9IiMzNmEzODIiLz4KCQkJPHN0b3Agb2Zmc2V0PSIuMTkiIHN0b3AtY29sb3I9IiMzNmEzODIiLz4KCQkJPHN0b3Agb2Zmc2V0PSIuNTQiIHN0b3AtY29sb3I9IiM0OWE0NTkiLz4KCQkJPHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjNzZhMzBiIi8+CgkJPC9saW5lYXJHcmFkaWVudD4KCQk8bGluZWFyR3JhZGllbnQgaWQ9Imc0IiB4Mj0iMSIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiIGdyYWRpZW50VHJhbnNmb3JtPSJtYXRyaXgoLjExNiwtMy4zMjMsMS45MTgsLjA2Nyw1LjYxNyw4LjE2MikiPgoJCQk8c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9IiMyNjc4ODAiLz4KCQkJPHN0b3Agb2Zmc2V0PSIuNTEiIHN0b3AtY29sb3I9IiM0NTdhNWMiLz4KCQkJPHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjNzE3NTE2Ii8+CgkJPC9saW5lYXJHcmFkaWVudD4KCQk8bGluZWFyR3JhZGllbnQgaWQ9Imc1IiB4Mj0iMSIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiIGdyYWRpZW50VHJhbnNmb3JtPSJtYXRyaXgoLjczOCwtMy44MzMsMS4xMDEsLjIxMiwxMS45Nyw3LjIxNCkiPgoJCQk8c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9IiNiMGQ5MzkiLz4KCQkJPHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjZWFkYjA0Ii8+CgkJPC9saW5lYXJHcmFkaWVudD4KCQk8bGluZWFyR3JhZGllbnQgaWQ9Imc2IiB4Mj0iMSIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiIGdyYWRpZW50VHJhbnNmb3JtPSJtYXRyaXgoMS4zOTMsLTMuNDQ4LDEuODU3LC43NSwxMC40OTYsNi44MjYpIj4KCQkJPHN0b3Agb2Zmc2V0PSIwIiBzdG9wLWNvbG9yPSIjNzRhZjUyIi8+CgkJCTxzdG9wIG9mZnNldD0iLjE3IiBzdG9wLWNvbG9yPSIjNzRhZjUyIi8+CgkJCTxzdG9wIG9mZnNldD0iLjQ4IiBzdG9wLWNvbG9yPSIjOTliZTMyIi8+CgkJCTxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iI2MwYzQwYSIvPgoJCTwvbGluZWFyR3JhZGllbnQ+Cgk8L2RlZnM+Cgk8c3R5bGU+CgkJLnMwIHsgZmlsbDogdXJsKCNnMSkgfSAKCQkuczEgeyBmaWxsOiB1cmwoI2cyKSB9IAoJCS5zMiB7IGZpbGw6IHVybCgjZzMpIH0gCgkJLnMzIHsgZmlsbDogdXJsKCNnNCkgfSAKCQkuczQgeyBmaWxsOiAjOTljYzMzIH0gCgkJLnM1IHsgZmlsbDogdXJsKCNnNSkgfSAKCQkuczYgeyBmaWxsOiB1cmwoI2c2KSB9IAoJCS5zNyB7IGZpbGw6ICNmZmUxMTMgfSAKCQkuczggeyBmaWxsOiAjZjNlNjAwIH0gCgk8L3N0eWxlPgoJPGc+CgkJPGc+CgkJCTxwYXRoIGNsYXNzPSJzMCIgZD0ibTkgMS45N3Y4LjAzbDAuODMtMC43IDAuMzYtOC4zM3oiLz4KCQk8L2c+CgkJPGc+CgkJCTxwYXRoIGNsYXNzPSJzMSIgZD0ibTkgMS45NywtMS4xOS0xIDAuMzUgOC4zMyAwLjg0IDAuN3oiLz4KCQk8L2c+CgkJPGc+CgkJCTxwYXRoIGNsYXNzPSJzMiIgZD0ibTYuMTIgNS41OGwwLjQ2IDIuNjIgMC42Ni0wLjgtMC4xMy0zLjAxeiIvPgoJCTwvZz4KCQk8Zz4KCQkJPHBhdGggY2xhc3M9InMzIiBkPSJtNi4xMiA1LjU4bC0xLjM1LTAuNzcgMC45MSAyLjg3IDAuOSAwLjUyeiIvPgoJCTwvZz4KCQk8Zz4KCQkJPHBhdGggY2xhc3M9InM0IiBkPSJtNy4xMSA0LjM5bC0xLjM0LTAuNzctMSAxLjE5IDEuMzUgMC43N3oiLz4KCQk8L2c+CgkJPGc+CgkJCTxwYXRoIGNsYXNzPSJzNSIgZD0ibTExLjk2IDQuMTlsLTAuNTQgMy4wMSAwLjgzLTAuNDggMS4wNS0zLjMxeiIvPgoJCTwvZz4KCQk8Zz4KCQkJPHBhdGggY2xhc3M9InM2IiBkPSJtMTEuOTYgNC4xOWwtMS0xLjE5LTAuMTUgMy40NiAwLjYxIDAuNzR6Ii8+CgkJPC9nPgoJCTxnPgoJCQk8cGF0aCBjbGFzcz0iczciIGQ9Im0xMy4zIDMuNDFsLTEtMS4xOC0xLjM0IDAuNzcgMSAxLjE5eiIvPgoJCTwvZz4KCQk8Zz4KCQkJPHBhdGggY2xhc3M9InM4IiBkPSJtMTAuMTkgMC45N2wtMS4xOS0wLjk3LTEuMTkgMC45NyAxLjE5IDF6Ii8+CgkJPC9nPgoJPC9nPgo8L3N2Zz4=) _Needle Engine_",
+      "attributes": [
+        {
+          "name": "ar",
+          "description": "Create an AR button\n\n",
+          "references": [
+            {
+              "name": "Needle Engine reference",
+              "url": "https://engine.needle.tools/docs/reference/needle-engine-attributes.html"
+            }
+          ]
+        },
+        {
+          "name": "vr",
+          "description": "Create a VR button\n\n",
+          "references": [
+            {
+              "name": "Needle Engine reference",
+              "url": "https://engine.needle.tools/docs/reference/needle-engine-attributes.html"
+            }
+          ]
+        },
+        {
+          "name": "quicklook",
+          "description": "Create a QuickLook button for iOS\n\n",
+          "references": [
+            {
+              "name": "Needle Engine reference",
+              "url": "https://engine.needle.tools/docs/reference/needle-engine-attributes.html"
+            }
+          ]
+        },
+        {
+          "name": "unstyled",
+          "description": "When present, the component won't add its default styles\n\n",
+          "references": [
+            {
+              "name": "Needle Engine reference",
+              "url": "https://engine.needle.tools/docs/reference/needle-engine-attributes.html"
+            }
+          ]
+        }
+      ],
+      "references": [
+        {
+          "name": "Needle Engine reference",
+          "url": "https://engine.needle.tools/docs/reference/needle-engine-attributes.html"
+        }
+      ]
+    },
+    {
+      "name": "needle-engine",
+      "description": "The <needle-engine> web component creates and manages a Needle Engine context for rendering a 3D scene using threejs. The context is created when the `src` attribute is set and disposed when the element is removed from the DOM; set the `keep-alive` attribute to `true` to prevent cleanup. The context is accessible as `document.querySelector('needle-engine').context`. See https://engine.needle.tools/docs/reference/needle-engine-attributes\n\n![Needle Engine Logo](data:image/svg+xml;base64,PHN2ZyB2ZXJzaW9uPSIxLjIiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgdmlld0JveD0iMCAwIDE4IDEwIiB3aWR0aD0iMTgiIGhlaWdodD0iMTAiPgoJPGRlZnM+CgkJPGxpbmVhckdyYWRpZW50IGlkPSJnMSIgeDI9IjEiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIiBncmFkaWVudFRyYW5zZm9ybT0ibWF0cml4KC4wNDUsLTguNjgsMS4xMzUsLjAwNiw5LjU0OSw5Ljg0NCkiPgoJCQk8c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9IiM2MmQzOTkiLz4KCQkJPHN0b3Agb2Zmc2V0PSIuNTEiIHN0b3AtY29sb3I9IiNhY2Q4NDIiLz4KCQkJPHN0b3Agb2Zmc2V0PSIuOSIgc3RvcC1jb2xvcj0iI2Q3ZGIwYSIvPgoJCQk8c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiNkN2RiMGEiLz4KCQk8L2xpbmVhckdyYWRpZW50PgoJCTxsaW5lYXJHcmFkaWVudCBpZD0iZzIiIHgyPSIxIiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSIgZ3JhZGllbnRUcmFuc2Zvcm09Im1hdHJpeCgtMC4wODUsLTguNjM2LDEuMTI0LC0wLjAxMSw4LjQ4Niw5LjUyOSkiPgoJCQk8c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9IiMwYmEzOTgiLz4KCQkJPHN0b3Agb2Zmc2V0PSIuNSIgc3RvcC1jb2xvcj0iIzRjYTM1MiIvPgoJCQk8c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiM3NmEzMGEiLz4KCQk8L2xpbmVhckdyYWRpZW50PgoJCTxsaW5lYXJHcmFkaWVudCBpZD0iZzMiIHgyPSIxIiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSIgZ3JhZGllbnRUcmFuc2Zvcm09Im1hdHJpeCgtMC4xMDEsLTMuNjIxLDEuMDI4LC0wLjAyOSw2LjcyNCw4LjEwNSkiPgoJCQk8c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9IiMzNmEzODIiLz4KCQkJPHN0b3Agb2Zmc2V0PSIuMTkiIHN0b3AtY29sb3I9IiMzNmEzODIiLz4KCQkJPHN0b3Agb2Zmc2V0PSIuNTQiIHN0b3AtY29sb3I9IiM0OWE0NTkiLz4KCQkJPHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjNzZhMzBiIi8+CgkJPC9saW5lYXJHcmFkaWVudD4KCQk8bGluZWFyR3JhZGllbnQgaWQ9Imc0IiB4Mj0iMSIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiIGdyYWRpZW50VHJhbnNmb3JtPSJtYXRyaXgoLjExNiwtMy4zMjMsMS45MTgsLjA2Nyw1LjYxNyw4LjE2MikiPgoJCQk8c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9IiMyNjc4ODAiLz4KCQkJPHN0b3Agb2Zmc2V0PSIuNTEiIHN0b3AtY29sb3I9IiM0NTdhNWMiLz4KCQkJPHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjNzE3NTE2Ii8+CgkJPC9saW5lYXJHcmFkaWVudD4KCQk8bGluZWFyR3JhZGllbnQgaWQ9Imc1IiB4Mj0iMSIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiIGdyYWRpZW50VHJhbnNmb3JtPSJtYXRyaXgoLjczOCwtMy44MzMsMS4xMDEsLjIxMiwxMS45Nyw3LjIxNCkiPgoJCQk8c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9IiNiMGQ5MzkiLz4KCQkJPHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjZWFkYjA0Ii8+CgkJPC9saW5lYXJHcmFkaWVudD4KCQk8bGluZWFyR3JhZGllbnQgaWQ9Imc2IiB4Mj0iMSIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiIGdyYWRpZW50VHJhbnNmb3JtPSJtYXRyaXgoMS4zOTMsLTMuNDQ4LDEuODU3LC43NSwxMC40OTYsNi44MjYpIj4KCQkJPHN0b3Agb2Zmc2V0PSIwIiBzdG9wLWNvbG9yPSIjNzRhZjUyIi8+CgkJCTxzdG9wIG9mZnNldD0iLjE3IiBzdG9wLWNvbG9yPSIjNzRhZjUyIi8+CgkJCTxzdG9wIG9mZnNldD0iLjQ4IiBzdG9wLWNvbG9yPSIjOTliZTMyIi8+CgkJCTxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iI2MwYzQwYSIvPgoJCTwvbGluZWFyR3JhZGllbnQ+Cgk8L2RlZnM+Cgk8c3R5bGU+CgkJLnMwIHsgZmlsbDogdXJsKCNnMSkgfSAKCQkuczEgeyBmaWxsOiB1cmwoI2cyKSB9IAoJCS5zMiB7IGZpbGw6IHVybCgjZzMpIH0gCgkJLnMzIHsgZmlsbDogdXJsKCNnNCkgfSAKCQkuczQgeyBmaWxsOiAjOTljYzMzIH0gCgkJLnM1IHsgZmlsbDogdXJsKCNnNSkgfSAKCQkuczYgeyBmaWxsOiB1cmwoI2c2KSB9IAoJCS5zNyB7IGZpbGw6ICNmZmUxMTMgfSAKCQkuczggeyBmaWxsOiAjZjNlNjAwIH0gCgk8L3N0eWxlPgoJPGc+CgkJPGc+CgkJCTxwYXRoIGNsYXNzPSJzMCIgZD0ibTkgMS45N3Y4LjAzbDAuODMtMC43IDAuMzYtOC4zM3oiLz4KCQk8L2c+CgkJPGc+CgkJCTxwYXRoIGNsYXNzPSJzMSIgZD0ibTkgMS45NywtMS4xOS0xIDAuMzUgOC4zMyAwLjg0IDAuN3oiLz4KCQk8L2c+CgkJPGc+CgkJCTxwYXRoIGNsYXNzPSJzMiIgZD0ibTYuMTIgNS41OGwwLjQ2IDIuNjIgMC42Ni0wLjgtMC4xMy0zLjAxeiIvPgoJCTwvZz4KCQk8Zz4KCQkJPHBhdGggY2xhc3M9InMzIiBkPSJtNi4xMiA1LjU4bC0xLjM1LTAuNzcgMC45MSAyLjg3IDAuOSAwLjUyeiIvPgoJCTwvZz4KCQk8Zz4KCQkJPHBhdGggY2xhc3M9InM0IiBkPSJtNy4xMSA0LjM5bC0xLjM0LTAuNzctMSAxLjE5IDEuMzUgMC43N3oiLz4KCQk8L2c+CgkJPGc+CgkJCTxwYXRoIGNsYXNzPSJzNSIgZD0ibTExLjk2IDQuMTlsLTAuNTQgMy4wMSAwLjgzLTAuNDggMS4wNS0zLjMxeiIvPgoJCTwvZz4KCQk8Zz4KCQkJPHBhdGggY2xhc3M9InM2IiBkPSJtMTEuOTYgNC4xOWwtMS0xLjE5LTAuMTUgMy40NiAwLjYxIDAuNzR6Ii8+CgkJPC9nPgoJCTxnPgoJCQk8cGF0aCBjbGFzcz0iczciIGQ9Im0xMy4zIDMuNDFsLTEtMS4xOC0xLjM0IDAuNzcgMSAxLjE5eiIvPgoJCTwvZz4KCQk8Zz4KCQkJPHBhdGggY2xhc3M9InM4IiBkPSJtMTAuMTkgMC45N2wtMS4xOS0wLjk3LTEuMTkgMC45NyAxLjE5IDF6Ii8+CgkJPC9nPgoJPC9nPgo8L3N2Zz4=) _Needle Engine_",
+      "attributes": [
+        {
+          "name": "src",
+          "description": "Change which model gets loaded. This will trigger a reload of the scene.\n@example src=\"path/to/scene.glb\"\n@example src=\"[./path/scene1.glb, myOtherScene.gltf]\"\n",
+          "references": [
+            {
+              "name": "Needle Engine reference",
+              "url": "https://engine.needle.tools/docs/reference/needle-engine-attributes.html"
+            }
+          ]
+        },
+        {
+          "name": "hash",
+          "description": "Optional. String attached to the context for caching/identification.\n\n",
+          "references": [
+            {
+              "name": "Needle Engine reference",
+              "url": "https://engine.needle.tools/docs/reference/needle-engine-attributes.html"
+            }
+          ]
+        },
+        {
+          "name": "camera-controls",
+          "description": "If set to false the camera controls are disabled. Default is true.\n@example <needle-engine camera-controls=\"false\"></needle-engine>\n@example <needle-engine camera-controls=\"true\"></needle-engine>\n@example <needle-engine camera-controls></needle-engine>\n@example <needle-engine></needle-engine>\n@returns {boolean | null} if the attribute is not set it returns null\n\n",
+          "values": [
+            {
+              "name": "true"
+            },
+            {
+              "name": "false"
+            },
+            {
+              "name": "none"
+            }
+          ],
+          "references": [
+            {
+              "name": "Needle Engine reference",
+              "url": "https://engine.needle.tools/docs/reference/needle-engine-attributes.html"
+            }
+          ]
+        },
+        {
+          "name": "dracoDecoderPath",
+          "description": "Override the default draco decoder path location.\n\n",
+          "references": [
+            {
+              "name": "Needle Engine reference",
+              "url": "https://engine.needle.tools/docs/reference/needle-engine-attributes.html"
+            }
+          ]
+        },
+        {
+          "name": "dracoDecoderType",
+          "description": "Override the default draco library type.\n\n",
+          "values": [
+            {
+              "name": "wasm"
+            },
+            {
+              "name": "js"
+            }
+          ],
+          "references": [
+            {
+              "name": "Needle Engine reference",
+              "url": "https://engine.needle.tools/docs/reference/needle-engine-attributes.html"
+            }
+          ]
+        },
+        {
+          "name": "ktx2DecoderPath",
+          "description": "Override the default KTX2 transcoder/decoder path\n\n",
+          "references": [
+            {
+              "name": "Needle Engine reference",
+              "url": "https://engine.needle.tools/docs/reference/needle-engine-attributes.html"
+            }
+          ]
+        },
+        {
+          "name": "tone-mapping",
+          "description": "Tonemapping mode\n\n",
+          "values": [
+            {
+              "name": "none"
+            },
+            {
+              "name": "linear"
+            },
+            {
+              "name": "neutral"
+            },
+            {
+              "name": "agx"
+            }
+          ],
+          "references": [
+            {
+              "name": "Needle Engine reference",
+              "url": "https://engine.needle.tools/docs/reference/needle-engine-attributes.html"
+            }
+          ]
+        },
+        {
+          "name": "tone-mapping-exposure",
+          "description": "Exposure multiplier for tonemapping\n\n",
+          "references": [
+            {
+              "name": "Needle Engine reference",
+              "url": "https://engine.needle.tools/docs/reference/needle-engine-attributes.html"
+            }
+          ]
+        },
+        {
+          "name": "background-blurriness",
+          "description": "Blurs the background image. Strength between 0 (sharp) and 1 (fully blurred).\n\n",
+          "references": [
+            {
+              "name": "Needle Engine reference",
+              "url": "https://engine.needle.tools/docs/reference/needle-engine-attributes.html"
+            }
+          ]
+        },
+        {
+          "name": "background-color",
+          "description": "CSS background color value to be used if no skybox or background image is provided.\n@example \"background-color='#ff0000'\" will set the background color to red.\n\n",
+          "references": [
+            {
+              "name": "Needle Engine reference",
+              "url": "https://engine.needle.tools/docs/reference/needle-engine-attributes.html"
+            }
+          ]
+        },
+        {
+          "name": "environment-intensity",
+          "description": "Intensity of environment lighting\n\n",
+          "references": [
+            {
+              "name": "Needle Engine reference",
+              "url": "https://engine.needle.tools/docs/reference/needle-engine-attributes.html"
+            }
+          ]
+        },
+        {
+          "name": "keep-alive",
+          "description": "Prevent Needle Engine context from being disposed when the element is removed from the DOM\n\n",
+          "valueSet": "b",
+          "references": [
+            {
+              "name": "Needle Engine reference",
+              "url": "https://engine.needle.tools/docs/reference/needle-engine-attributes.html"
+            }
+          ]
+        },
+        {
+          "name": "background-image",
+          "description": "URL to .exr, .hdr, .png, .jpg to be used as skybox. Can also be a magic name for built-in skyboxes, or a FastHDR URL from cdn.needle.tools.",
+          "values": [
+            {
+              "name": "studio",
+              "description": "Neutral studio lighting (magic name)"
+            },
+            {
+              "name": "blurred-skybox",
+              "description": "Soft blurred environment (magic name)"
+            },
+            {
+              "name": "quicklook",
+              "description": "Apple QuickLook Object Mode (magic name)"
+            },
+            {
+              "name": "quicklook-ar",
+              "description": "Apple QuickLook AR Mode (magic name)"
+            },
+            {
+              "name": "https://cdn.needle.tools/static/hdris/studio_small_09_2k.pmrem.ktx2",
+              "description": "FastHDR: Studio Small - neutral product lighting"
+            },
+            {
+              "name": "https://cdn.needle.tools/static/hdris/photo_studio_01_2k.pmrem.ktx2",
+              "description": "FastHDR: Photo Studio - professional lighting"
+            },
+            {
+              "name": "https://cdn.needle.tools/static/hdris/brown_photostudio_02_2k.pmrem.ktx2",
+              "description": "FastHDR: Brown Photo Studio - warm tones"
+            },
+            {
+              "name": "https://cdn.needle.tools/static/hdris/venice_sunset_2k.pmrem.ktx2",
+              "description": "FastHDR: Venice Sunset - golden hour"
+            },
+            {
+              "name": "https://cdn.needle.tools/static/hdris/spruit_sunrise_2k.pmrem.ktx2",
+              "description": "FastHDR: Spruit Sunrise - morning light"
+            },
+            {
+              "name": "https://cdn.needle.tools/static/hdris/meadow_2k.pmrem.ktx2",
+              "description": "FastHDR: Meadow - outdoor natural"
+            },
+            {
+              "name": "https://cdn.needle.tools/static/hdris/canary_wharf_2k.pmrem.ktx2",
+              "description": "FastHDR: Canary Wharf - urban daylight"
+            },
+            {
+              "name": "https://cdn.needle.tools/static/hdris/shanghai_bund_2k.pmrem.ktx2",
+              "description": "FastHDR: Shanghai Bund - city night"
+            },
+            {
+              "name": "https://cdn.needle.tools/static/hdris/cayley_interior_2k.pmrem.ktx2",
+              "description": "FastHDR: Cayley Interior - indoor ambient"
+            },
+            {
+              "name": "https://cdn.needle.tools/static/hdris/fireplace_2k.pmrem.ktx2",
+              "description": "FastHDR: Fireplace - warm interior"
+            },
+            {
+              "name": "https://cdn.needle.tools/static/hdris/the_sky_is_on_fire_2k.pmrem.ktx2",
+              "description": "FastHDR: The Sky is on Fire - dramatic sunset"
+            },
+            {
+              "name": "https://cdn.needle.tools/static/hdris/dikhololo_night_2k.pmrem.ktx2",
+              "description": "FastHDR: Dikhololo Night - night sky"
+            }
+          ],
+          "references": [
+            {
+              "name": "Needle Engine reference",
+              "url": "https://engine.needle.tools/docs/reference/needle-engine-attributes.html"
+            },
+            {
+              "name": "FastHDR Library",
+              "url": "https://cloud.needle.tools/hdris"
+            }
+          ]
+        },
+        {
+          "name": "environment-image",
+          "description": "URL to .exr, .hdr, .png, .jpg to be used for lighting. Can also be a magic name for built-in environments, or a FastHDR URL from cdn.needle.tools.",
+          "values": [
+            {
+              "name": "studio",
+              "description": "Neutral studio lighting (magic name)"
+            },
+            {
+              "name": "blurred-skybox",
+              "description": "Soft blurred environment (magic name)"
+            },
+            {
+              "name": "quicklook",
+              "description": "Apple QuickLook Object Mode (magic name)"
+            },
+            {
+              "name": "quicklook-ar",
+              "description": "Apple QuickLook AR Mode (magic name)"
+            },
+            {
+              "name": "https://cdn.needle.tools/static/hdris/studio_small_09_2k.pmrem.ktx2",
+              "description": "FastHDR: Studio Small - neutral product lighting"
+            },
+            {
+              "name": "https://cdn.needle.tools/static/hdris/photo_studio_01_2k.pmrem.ktx2",
+              "description": "FastHDR: Photo Studio - professional lighting"
+            },
+            {
+              "name": "https://cdn.needle.tools/static/hdris/brown_photostudio_02_2k.pmrem.ktx2",
+              "description": "FastHDR: Brown Photo Studio - warm tones"
+            },
+            {
+              "name": "https://cdn.needle.tools/static/hdris/venice_sunset_2k.pmrem.ktx2",
+              "description": "FastHDR: Venice Sunset - golden hour"
+            },
+            {
+              "name": "https://cdn.needle.tools/static/hdris/spruit_sunrise_2k.pmrem.ktx2",
+              "description": "FastHDR: Spruit Sunrise - morning light"
+            },
+            {
+              "name": "https://cdn.needle.tools/static/hdris/meadow_2k.pmrem.ktx2",
+              "description": "FastHDR: Meadow - outdoor natural"
+            },
+            {
+              "name": "https://cdn.needle.tools/static/hdris/canary_wharf_2k.pmrem.ktx2",
+              "description": "FastHDR: Canary Wharf - urban daylight"
+            },
+            {
+              "name": "https://cdn.needle.tools/static/hdris/shanghai_bund_2k.pmrem.ktx2",
+              "description": "FastHDR: Shanghai Bund - city night"
+            },
+            {
+              "name": "https://cdn.needle.tools/static/hdris/cayley_interior_2k.pmrem.ktx2",
+              "description": "FastHDR: Cayley Interior - indoor ambient"
+            },
+            {
+              "name": "https://cdn.needle.tools/static/hdris/fireplace_2k.pmrem.ktx2",
+              "description": "FastHDR: Fireplace - warm interior"
+            },
+            {
+              "name": "https://cdn.needle.tools/static/hdris/the_sky_is_on_fire_2k.pmrem.ktx2",
+              "description": "FastHDR: The Sky is on Fire - dramatic sunset"
+            },
+            {
+              "name": "https://cdn.needle.tools/static/hdris/dikhololo_night_2k.pmrem.ktx2",
+              "description": "FastHDR: Dikhololo Night - night sky"
+            }
+          ],
+          "references": [
+            {
+              "name": "Needle Engine reference",
+              "url": "https://engine.needle.tools/docs/reference/needle-engine-attributes.html"
+            },
+            {
+              "name": "FastHDR Library",
+              "url": "https://cloud.needle.tools/hdris"
+            }
+          ]
+        },
+        {
+          "name": "background-intensity",
+          "description": "Intensity multiplier for the background image.",
+          "references": [
+            {
+              "name": "Needle Engine reference",
+              "url": "https://engine.needle.tools/docs/reference/needle-engine-attributes.html"
+            }
+          ]
+        },
+        {
+          "name": "transparent",
+          "description": "Enable/disable renderer canvas transparency.",
+          "valueSet": "b",
+          "references": [
+            {
+              "name": "Needle Engine reference",
+              "url": "https://engine.needle.tools/docs/reference/needle-engine-attributes.html"
+            }
+          ]
+        },
+        {
+          "name": "contact-shadows",
+          "description": "Enable/disable contact shadows in the rendered scene",
+          "valueSet": "c",
+          "references": [
+            {
+              "name": "Needle Engine reference",
+              "url": "https://engine.needle.tools/docs/reference/needle-engine-attributes.html"
+            }
+          ]
+        },
+        {
+          "name": "focus-rect",
+          "description": "Defines a CSS selector or HTMLElement where the camera should be focused on. Content will be fit into this element.",
+          "references": [
+            {
+              "name": "Needle Engine reference",
+              "url": "https://engine.needle.tools/docs/reference/needle-engine-attributes.html"
+            }
+          ]
+        },
+        {
+          "name": "clickthrough",
+          "description": "Allow pointer events to pass through transparent parts of the content to the underlying DOM elements.",
+          "valueSet": "b",
+          "references": [
+            {
+              "name": "Needle Engine reference",
+              "url": "https://engine.needle.tools/docs/reference/needle-engine-attributes.html"
+            }
+          ]
+        },
+        {
+          "name": "auto-fit",
+          "description": "Automatically fits the model into the camera view on load.",
+          "valueSet": "b",
+          "references": [
+            {
+              "name": "Needle Engine reference",
+              "url": "https://engine.needle.tools/docs/reference/needle-engine-attributes.html"
+            }
+          ]
+        },
+        {
+          "name": "auto-rotate",
+          "description": "Automatically rotates the model until a user interacts with the scene.",
+          "valueSet": "b",
+          "references": [
+            {
+              "name": "Needle Engine reference",
+              "url": "https://engine.needle.tools/docs/reference/needle-engine-attributes.html"
+            }
+          ]
+        },
+        {
+          "name": "autoplay",
+          "description": "Play animations automatically on scene load",
+          "valueSet": "b",
+          "references": [
+            {
+              "name": "Needle Engine reference",
+              "url": "https://engine.needle.tools/docs/reference/needle-engine-attributes.html"
+            }
+          ]
+        },
+        {
+          "name": "onloadstart",
+          "description": "Emitted when loading begins for the scene. The event is cancelable — calling `preventDefault()` will stop the default loading UI behavior, so apps can implement custom loading flows.",
+          "references": [
+            {
+              "name": "Needle Engine reference",
+              "url": "https://engine.needle.tools/docs/reference/needle-engine-attributes.html"
+            }
+          ]
+        },
+        {
+          "name": "onprogress",
+          "description": "Emitted repeatedly while loading resources. Use the event detail to show progress.",
+          "references": [
+            {
+              "name": "Needle Engine reference",
+              "url": "https://engine.needle.tools/docs/reference/needle-engine-attributes.html"
+            }
+          ]
+        },
+        {
+          "name": "onloadfinished",
+          "description": "Emitted when scene loading has finished.",
+          "references": [
+            {
+              "name": "Needle Engine reference",
+              "url": "https://engine.needle.tools/docs/reference/needle-engine-attributes.html"
+            }
+          ]
+        },
+        {
+          "name": "onxr-session-ended",
+          "description": "Emitted when an XR session ends.",
+          "references": [
+            {
+              "name": "Needle Engine reference",
+              "url": "https://engine.needle.tools/docs/reference/needle-engine-attributes.html"
+            }
+          ]
+        },
+        {
+          "name": "onenter-ar",
+          "description": "Emitted when entering an AR session.",
+          "references": [
+            {
+              "name": "Needle Engine reference",
+              "url": "https://engine.needle.tools/docs/reference/needle-engine-attributes.html"
+            }
+          ]
+        },
+        {
+          "name": "onexit-ar",
+          "description": "Emitted when exiting an AR session.",
+          "references": [
+            {
+              "name": "Needle Engine reference",
+              "url": "https://engine.needle.tools/docs/reference/needle-engine-attributes.html"
+            }
+          ]
+        },
+        {
+          "name": "onenter-vr",
+          "description": "Emitted when entering a VR session.",
+          "references": [
+            {
+              "name": "Needle Engine reference",
+              "url": "https://engine.needle.tools/docs/reference/needle-engine-attributes.html"
+            }
+          ]
+        },
+        {
+          "name": "onexit-vr",
+          "description": "Emitted when exiting a VR session.",
+          "references": [
+            {
+              "name": "Needle Engine reference",
+              "url": "https://engine.needle.tools/docs/reference/needle-engine-attributes.html"
+            }
+          ]
+        },
+        {
+          "name": "onready",
+          "description": "Emitted when the engine has rendered its first frame and is ready.",
+          "references": [
+            {
+              "name": "Needle Engine reference",
+              "url": "https://engine.needle.tools/docs/reference/needle-engine-attributes.html"
+            }
+          ]
+        },
+        {
+          "name": "onxr-session-started",
+          "description": "Emitted when an XR session is started. You can do additional setup here.",
+          "references": [
+            {
+              "name": "Needle Engine reference",
+              "url": "https://engine.needle.tools/docs/reference/needle-engine-attributes.html"
+            }
+          ]
+        }
+      ],
+      "references": [
+        {
+          "name": "Needle Engine reference",
+          "url": "https://engine.needle.tools/docs/reference/needle-engine-attributes.html"
+        }
+      ]
+    }
+  ],
+  "globalAttributes": [],
+  "valueSets": [
+    {
+      "name": "b",
+      "values": [
+        {
+          "name": "true"
+        },
+        {
+          "name": "false"
+        }
+      ]
+    },
+    {
+      "name": "c",
+      "values": [
+        {
+          "name": "true"
+        },
+        {
+          "name": "1"
+        },
+        {
+          "name": "false"
+        },
+        {
+          "name": "0"
+        }
+      ]
+    }
+  ]
+}

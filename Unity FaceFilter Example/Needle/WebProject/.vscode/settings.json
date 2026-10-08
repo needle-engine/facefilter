@@ -1,0 +1,6 @@
+{
+  "html.customData": [
+    "./custom-elements.json",
+    "node_modules/@needle-tools/engine/.needle/generated/needle-html-data.json"
+  ]
+}

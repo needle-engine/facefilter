@@ -19,6 +19,9 @@
       "**/.git": true,
       "**/.DS_Store": true,
       "**/*.meta": true
-    }
+    },
+    "html.customData": [
+      "./custom-elements.json"
+    ]
   }
 }
