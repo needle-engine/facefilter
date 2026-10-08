@@ -1,5 +1,11 @@
 # Generic WebXR hand models
 
+These are shared library assets, included in the `@needle-tools/facefilter` npm
+package. Unity imports this directory and its `.meta` files; browser tracking,
+the standalone HTML example, and the web demo use the same GLBs through
+`getHandModelUrl()`. Browser projects do not need Unity installed. Keep one copy
+here; no demo copies or symlinks are required.
+
 Copied unchanged from `@webxr-input-profiles/assets@1.0.20`, `dist/profiles/generic-hand/{left,right}.glb`.
 These are the same generic hand profile models loaded by Needle Engine's `XRHandMeshModel`.
 

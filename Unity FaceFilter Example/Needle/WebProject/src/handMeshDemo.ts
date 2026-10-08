@@ -1,5 +1,5 @@
 import { AssetReference } from "@needle-tools/engine";
-import { HandTrackingBehaviour, NeedleTrackingManager } from "@needle-tools/facefilter";
+import { getHandModelUrl, HandTrackingBehaviour, NeedleTrackingManager } from "@needle-tools/facefilter";
 import { DoubleSide, Mesh, MeshBasicMaterial, MeshNormalMaterial } from "three";
 
 export type HandMeshMode = "visible" | "wireframe" | "depth" | "off";
@@ -12,15 +12,8 @@ export async function addHandMeshes(manager: NeedleTrackingManager) {
     const depth = new MeshBasicMaterial({ colorWrite: false, depthWrite: true, side: DoubleSide });
     const meshes: Mesh[] = [];
     const trackers: HandTrackingBehaviour[] = [];
-    // Tracking reflects image X for the selfie view. Its Left/Right handles
-    // therefore require the opposite anatomical WebXR mesh in camera space.
-    // Keep the tracking handle unchanged; only swap the source geometry.
-    const urls = {
-        Left: new URL("../include/hand-models/right.glb", import.meta.url).href,
-        Right: new URL("../include/hand-models/left.glb", import.meta.url).href,
-    };
     for (const side of ["Left", "Right"] as const) {
-        const url = urls[side];
+        const url = getHandModelUrl(side);
         const model = await AssetReference.getOrCreateFromUrl(url, manager.context).instantiate();
         if (!model) throw new Error(`Could not load the ${side} hand mesh.`);
         model.name = `${side} tracked hand mesh`;

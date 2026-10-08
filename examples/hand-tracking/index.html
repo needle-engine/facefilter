@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hand attachment ? no Unity required</title>
+  <style>
+    html, body { margin: 0; width: 100%; height: 100%; background: #181b22; color: white; font: 16px system-ui; }
+    needle-engine { display: block; width: 100%; height: 100%; }
+    aside { position: fixed; z-index: 10; top: 16px; left: 16px; max-width: 300px; padding: 12px 16px; border-radius: 8px; background: #181b22dd; pointer-events: none; }
+    aside p { margin: 6px 0 0; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <aside><strong>Show either hand</strong><p>Allow camera access. The cube follows your ring finger and hides behind your hand.</p></aside>
+  <script type="module">
+    import { onStart } from "@needle-tools/engine";
+    import { HandAttachment, NeedleTrackingManager } from "@needle-tools/facefilter";
+    import { BoxGeometry, Group, Mesh, MeshNormalMaterial } from "three";
+
+    onStart(context => {
+      const manager = context.scene.addComponent(NeedleTrackingManager, {
+        maxFaces: 0,
+        maxHands: 2,
+      });
+
+      const attachment = new Group();
+      context.scene.add(attachment);
+      const cube = new Mesh(new BoxGeometry(0.014, 0.014, 0.014), new MeshNormalMaterial());
+      cube.position.y = 0.01; // +Y lifts the child outward from the back of the hand.
+      attachment.add(cube);
+      attachment.addComponent(HandAttachment, {
+        manager,
+        handedness: "Any", // Use "Both" to show one copy on each hand.
+        finger: "ring",
+        segment: 0,
+        position: 0.75,
+        coordinateSpace: "hand-back",
+        handOcclusion: true, // Automatically loads the model shipped in the npm package.
+      });
+    });
+  </script>
+  <needle-engine></needle-engine>
+</body>
+</html>

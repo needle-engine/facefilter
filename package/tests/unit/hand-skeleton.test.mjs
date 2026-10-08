@@ -9,7 +9,7 @@ import { replayHandFrame } from "../replay-hand-frame.mjs";
 
 const flip = new Quaternion(1, 0, 0, 0);
 async function loadHand(side) {
-    const bytes = await readFile(new URL(`../../../Unity FaceFilter Example/Needle/WebProject/include/hand-models/${side}.glb`, import.meta.url));
+    const bytes = await readFile(new URL(`../../unity/Runtime/Models/${side}.glb`, import.meta.url));
     const gltf = await new GLTFLoader().parseAsync(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength), "");
     gltf.scene.updateMatrixWorld(true);
     const mesh = gltf.scene.getObjectByProperty("isSkinnedMesh", true);

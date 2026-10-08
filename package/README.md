@@ -25,6 +25,11 @@ Then see the code or examples below:
 
 ### Hand tracking
 
+For a standalone HTML page with a small JavaScript module, see the
+[no-Unity hand attachment example](../examples/hand-tracking/). It includes camera
+tracking, a finger attachment, and automatic hand occlusion using the packaged models.
+
+
 Hand tracking uses MediaPipe's normalized image XYZ landmarks for position and
 orientation in Needle Engine's camera space. Metric landmarks initialize a
 shared hand-size reference for depth estimation. Attach a Three.js object to a stable joint before
@@ -370,6 +375,11 @@ exported web scenes using the old component name must not be paired with the
 | Resources | The caller owns asset geometry/materials/textures. Detaching does not dispose shared resources or restore the former parent. Autofit restores its initial position/scale. |
 | Reattachment | Attaching an object again disposes its old attachment, including when moving between hands. An old handle cannot detach a new attachment. |
 
+Hand skins read joint poses without adding per-joint objects to the scene.
+`getJointRotation(point, quaternion)` reads a camera-local, pad-facing rotation
+without creating an anchor; it returns null when tracking is lost. Explicit joints
+and attachment anchors are grouped under the manager's `Hand Tracking` camera child.
+
 Use `attachToHand` for owned objects. `getJoint` exposes a shared anchor; treat
 that anchor and its placement descriptor as read-only. Attachment descriptors
 are retained, so an application's slider can update `t01` directly.
@@ -465,6 +475,14 @@ Hand attachments must not be added to the manager's face **Filters** list. The r
 excludes hand attachment roots from that list to prevent the face system from moving them.
 
 ### Automatic hand mesh
+
+The shared GLBs live in `unity/Runtime/Models/{left,right}.glb` inside the
+`@needle-tools/facefilter` npm package. Unity imports them with their `.meta` files;
+the browser runtime, standalone example, and web demo load those same assets.
+**Unity is not required for browser use.** No copying or symlinks are needed.
+For custom loading, `getHandModelUrl("Left" | "Right")` returns the model URL
+for a tracking side, including the anatomical-side swap for the mirrored camera.
+
 
 Add **Hand Mesh Tracking** to an empty object and choose the hand. It uses an existing
 WebXR-named skinned mesh if present; otherwise **Use Built-in Hand if Empty** loads the

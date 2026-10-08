@@ -570,6 +570,8 @@ export class NeedleTrackingManager extends Behaviour {
         imageSegmentation?.close();
         for (const hand of this._handsBySide.values()) hand.dispose();
         this._handsBySide.clear();
+        this._handTrackingRoot?.removeFromParent();
+        this._handTrackingRoot = null;
         if (NeedleTrackingManager._instance === this) NeedleTrackingManager._instance = null;
     }
 
@@ -659,6 +661,15 @@ export class NeedleTrackingManager extends Behaviour {
     private readonly _faces: Array<FaceInstance> = [];
     private readonly _hands: Array<HandInstance> = [];
     private readonly _handsBySide = new Map<string, HandInstance>();
+    private _handTrackingRoot: Object3D | null = null;
+    /** @internal Camera-local container for explicit joints and attachments. */
+    get handTrackingRoot(): Object3D {
+        const root = this._handTrackingRoot ??= new Object3D();
+        root.name = "Hand Tracking";
+        if (root.parent !== this.context.mainCamera) this.context.mainCamera.add(root);
+        return root;
+    }
+
     /** @internal Shared scale prevents left/right detections establishing different units. */
     readonly handScaleReference = new HandScaleReference();
 
@@ -1471,6 +1482,52 @@ export class HandInstance implements ITrackingInstance {
         return joint ? target.copy(joint) : null;
     }
 
+    /** Camera-local, pad-facing joint orientation without allocating a scene object.
+     * Returns null while tracking is lost or the segment cannot be resolved. */
+    getJointRotation(point: HandAttachmentPoint, target: Quaternion): Quaternion | null {
+        if (!this._isTracked) return null;
+        const from = typeof point === "string" ? point : point.p0;
+        const fromIndex = MediapipeHelper.getJointIndex(from);
+        cameraPalmNormal(this._cameraLandmarks, this.handedness, _handNormal);
+        // Reflection reverses the winding used to calculate a surface normal.
+        if (!mirror) _handNormal.negate();
+        _handNormal.normalize();
+        _handPalmForward.subVectors(this._cameraLandmarks[9], this._cameraLandmarks[0]).normalize();
+        const indexKnuckle = this._cameraLandmarks[5];
+        const pinkyKnuckle = this._cameraLandmarks[17];
+        _handSide.set(0, 0, 0);
+        if (indexKnuckle && pinkyKnuckle) _handSide.subVectors(indexKnuckle, pinkyKnuckle);
+
+        const previousIndex = MediapipeHelper.getPreviousJointIndex(from);
+        const directionIndex = typeof point === "string" ? fromIndex : MediapipeHelper.getJointIndex(point.p1);
+        const startIndex = typeof point === "string" ? Math.max(0, previousIndex) : fromIndex;
+        const endIndex = previousIndex < 0 && typeof point === "string" ? 9 : directionIndex;
+        const baseIndex = directionIndex >= 5
+            ? 5 + Math.floor((directionIndex - 5) / 4) * 4
+            : directionIndex >= 1 ? 1 : 0;
+        const nextIndex = baseIndex === 0 ? 9 : baseIndex + 1;
+
+        if (!this.getJointPosition(startIndex, _handOtherPoint) ||
+            !this.getJointPosition(endIndex, _handPoint)) return null;
+        _handForward.subVectors(_handPoint, _handOtherPoint);
+        if (_handForward.lengthSq() < 1e-8 || _handNormal.lengthSq() < 1e-8) return null;
+        _handForward.normalize();
+
+        // Position, bone direction, and palm orientation now share one 3D
+        // landmark set and one camera conversion, including fingertip depth.
+        _handReferenceForward.copy(_handForward);
+        const base = this._cameraLandmarks[baseIndex];
+        const next = this._cameraLandmarks[nextIndex];
+        if (startIndex !== 0 && base && next)
+            _handReferenceForward.subVectors(next, base).normalize();
+        if (!buildFingerBasis(_handForward, _handSide, _handNormal,
+            _handReferenceForward, _handRight, _handUp, _handPalmForward)) return null;
+        _handRotationMatrix.makeBasis(_handRight, _handUp, _handForward);
+        _handRotation.setFromRotationMatrix(_handRotationMatrix);
+
+        return target.copy(_handRotation);
+    }
+
     render(results: HandLandmarkerResult, index: number): void {
         const camera = this.context.mainCamera;
         if (!(camera instanceof PerspectiveCamera) && !(camera instanceof OrthographicCamera)) return;
@@ -1538,16 +1595,6 @@ export class HandInstance implements ITrackingInstance {
         }
         this._isTracked = true;
         this._handIndex = index;
-        cameraPalmNormal(this._cameraLandmarks, this.handedness, _handNormal);
-        // Reflection reverses the winding used to calculate a surface normal.
-        if (!mirror) _handNormal.negate();
-        _handNormal.normalize();
-        _handPalmForward.subVectors(this._cameraLandmarks[9], this._cameraLandmarks[0]).normalize();
-        const indexKnuckle = this._cameraLandmarks[5];
-        const pinkyKnuckle = this._cameraLandmarks[17];
-        _handSide.set(0, 0, 0);
-        if (indexKnuckle && pinkyKnuckle) _handSide.subVectors(indexKnuckle, pinkyKnuckle);
-
         for (const { point, object, coordinateSpace, rotationFilter, rotationSmoothing, rotationOptions } of this._anchors.values()) {
             const from = typeof point === "string" ? point : point.p0;
             const fromIndex = MediapipeHelper.getJointIndex(from);
@@ -1557,37 +1604,13 @@ export class HandInstance implements ITrackingInstance {
                 if (this.getJointPosition(toIndex, _handOtherPoint))
                     _handPoint.lerp(_handOtherPoint, Math.max(0, Math.min(1, point.t01)));
             }
-            if (object.parent !== camera) camera.add(object);
+            const root = this.manager.handTrackingRoot;
+            if (object.parent !== root) root.add(object);
             object.visible = true;
             object.position.copy(_handPoint);
             object.scale.setScalar(this._renderScale);
 
-            const previousIndex = MediapipeHelper.getPreviousJointIndex(from);
-            const directionIndex = typeof point === "string" ? fromIndex : MediapipeHelper.getJointIndex(point.p1);
-            const startIndex = typeof point === "string" ? Math.max(0, previousIndex) : fromIndex;
-            const endIndex = previousIndex < 0 && typeof point === "string" ? 9 : directionIndex;
-            const baseIndex = directionIndex >= 5
-                ? 5 + Math.floor((directionIndex - 5) / 4) * 4
-                : directionIndex >= 1 ? 1 : 0;
-            const nextIndex = baseIndex === 0 ? 9 : baseIndex + 1;
-
-            if (!this.getJointPosition(startIndex, _handOtherPoint) ||
-                !this.getJointPosition(endIndex, _handPoint)) continue;
-            _handForward.subVectors(_handPoint, _handOtherPoint);
-            if (_handForward.lengthSq() < 1e-8 || _handNormal.lengthSq() < 1e-8) continue;
-            _handForward.normalize();
-
-            // Position, bone direction, and palm orientation now share one 3D
-            // landmark set and one camera conversion, including fingertip depth.
-            _handReferenceForward.copy(_handForward);
-            const base = this._cameraLandmarks[baseIndex];
-            const next = this._cameraLandmarks[nextIndex];
-            if (startIndex !== 0 && base && next)
-                _handReferenceForward.subVectors(next, base).normalize();
-            if (!buildFingerBasis(_handForward, _handSide, _handNormal,
-                _handReferenceForward, _handRight, _handUp, _handPalmForward)) continue;
-            _handRotationMatrix.makeBasis(_handRight, _handUp, _handForward);
-            _handRotation.setFromRotationMatrix(_handRotationMatrix);
+            if (!this.getJointRotation(point, _handRotation)) { object.visible = false; continue; }
 
             object.quaternion.copy(rotationFilter
                 ? rotationFilter.update(_handRotation, this.context.time.deltaTime, rotationSmoothing!, this._measurementTime, rotationOptions)

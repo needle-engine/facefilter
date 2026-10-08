@@ -4,10 +4,15 @@ import rightHandUrl from "../../unity/Runtime/Models/right.glb?url";
 import { SharedHandMesh } from "./SharedHandMesh.js";
 import type { HandLandmarkerResult } from "@mediapipe/tasks-vision";
 import { AssetReference, Behaviour, destroy, serializable } from "@needle-tools/engine";
-import { DoubleSide, Mesh, MeshBasicMaterial, MeshNormalMaterial, Object3D, SkinnedMesh } from "three";
+import { DoubleSide, Mesh, MeshBasicMaterial, MeshNormalMaterial, Object3D, Quaternion, SkinnedMesh } from "three";
 import { NeedleTrackingManager } from "../TrackingManager.js";
 import type { HandInstance } from "../TrackingManager.js";
 import { HandSkeleton, XR_HAND_JOINTS } from "./HandSkeleton.js";
+
+/** Packaged model URL for a tracking side, accounting for the mirrored camera view. */
+export function getHandModelUrl(hand: "Left" | "Right"): string {
+    return hand === "Left" ? rightHandUrl : leftHandUrl;
+}
 
 /** Drive a WebXR-named skinned hand using the same pose as hand attachments. */
 export class HandTrackingBehaviour extends Behaviour {
@@ -64,7 +69,7 @@ export class HandTrackingBehaviour extends Behaviour {
         this._modelState = "loading";
         try {
             // Mirrored tracking needs the opposite anatomical source mesh.
-            const url = this.handedness === "Left" ? rightHandUrl : leftHandUrl;
+            const url = getHandModelUrl(this.handedness);
             const model = await AssetReference.getOrCreateFromUrl(url, this.context).instantiate();
             if (!model) throw new Error("Could not load the default hand mesh.");
             if (this._destroyed) { destroy(model, true, false); return; }
@@ -122,7 +127,7 @@ export class HandTrackingBehaviour extends Behaviour {
 
 export class HandTrackingSkinnedMeshRenderer extends Behaviour {
     private readonly _skins: HandSkeleton[] = [];
-    private readonly _anchors = new Map<string, Object3D>();
+    private readonly _poses = new Map<string, { point: Parameters<HandInstance["getJoint"]>[0], rotation: Quaternion }>();
     private _hand: HandInstance | null = null;
 
     awake() {
@@ -138,19 +143,20 @@ export class HandTrackingSkinnedMeshRenderer extends Behaviour {
     bindHand(hand: HandInstance) {
         if (this._hand === hand) return;
         this._hand = hand;
-        this._anchors.clear();
+        this._poses.clear();
         for (const spec of XR_HAND_JOINTS) {
             const point = spec.name === "wrist" ? "wrist" : { p0: spec.from, p1: spec.to, t01: 0 };
-            const anchor = hand.getJoint(point as Parameters<HandInstance["getJoint"]>[0]);
-            this._anchors.set(spec.name, anchor);
+            this._poses.set(spec.name, { point: point as Parameters<HandInstance["getJoint"]>[0], rotation: new Quaternion() });
         }
     }
     updateHand(hand: HandInstance, thickness = 1): boolean {
         this.bindHand(hand);
-        if (![...this._anchors.values()].every(anchor => anchor.visible)) return false;
+        if (!hand.isTracked) return false;
+        for (const pose of this._poses.values())
+            if (!hand.getJointRotation(pose.point, pose.rotation)) return false;
         return this._skins.length > 0 && this._skins.every(skin => skin.update(
             (index, target) => hand.getJointPosition(index, target),
-            name => this._anchors.get(name)?.quaternion,
+            name => this._poses.get(name)?.rotation,
             this.context.mainCamera.matrixWorld, thickness));
     }
 }

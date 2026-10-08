@@ -1,0 +1,20 @@
+{
+  "name": "facefilter-hand-tracking-example",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host",
+    "build": "vite build",
+    "preview": "vite preview --host"
+  },
+  "dependencies": {
+    "@needle-tools/engine": "5.1.14",
+    "@needle-tools/facefilter": "file:../../package",
+    "three": "npm:@needle-tools/three@0.169.19"
+  },
+  "devDependencies": {
+    "vite": "8.0.3",
+    "@vitejs/plugin-basic-ssl": "2.3.0"
+  }
+}

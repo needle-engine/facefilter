@@ -53,17 +53,20 @@ test("scene camera mode preserves camera identity and auto restores it when leav
 
 test("recorded poses drive the production skin and measured ring fitting together",async()=>{
  const {GLTFLoader}=await import("three/examples/jsm/loaders/GLTFLoader.js");
- const bytes=await readFile(new URL("../../../Unity FaceFilter Example/Needle/WebProject/include/hand-models/right.glb",import.meta.url));
+ const bytes=await readFile(new URL("../../unity/Runtime/Models/right.glb",import.meta.url));
  const {scene}=await new GLTFLoader().parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),"");
  const {manager}=runtime(),hand=manager.getHand("Left");
  const skin=new HandTrackingSkinnedMeshRenderer();skin.gameObject=scene;skin.context=manager.context;skin.awake();
  const behaviour=new HandTrackingBehaviour();behaviour.gameObject=scene;behaviour.context=manager.context;
  scene.getOrAddComponent=()=>skin;behaviour.awake();behaviour.activeAndEnabled=true;skin.bindHand(hand);hand.addBehaviour(behaviour);
+ assert.equal(hand._anchors.size,0,"binding a skin must not allocate scene anchors");
  const ring=new Mesh(new TorusGeometry(.01,.001,16,64));
  const handle=hand.attachToHand(ring,{p0:"ring_finger_mcp",p1:"ring_finger_pip",t01:.75},{autoFit:{smoothing:0}});
  for(const frame of capture.frames){
   hand.remove();feed(manager,structuredClone(frame));
   assert.ok(behaviour.skinnedMeshes.every(mesh=>mesh.visible));
+  assert.equal(hand._anchors.size,2,"only attachment and fit measurement anchors are needed");
+  assert.equal(ring.parent.parent.name,"Hand Tracking");
   assert.equal(handle.status.autoFit.state,"fitted",JSON.stringify(handle.status.autoFit));
   assert.ok(Number.isFinite(ring.scale.x)&&ring.scale.x>0&&ring.scale.x<=2);
  }
@@ -214,4 +217,20 @@ test("Unity and direct attachments share hand-back axes without modifying author
  attachment.coordinateSpace="finger-pad";attachment.attach();feed(manager,structuredClone(capture.frames[0]));
  assert.ok(model.parent.quaternion.angleTo(pad.parent.quaternion)<1e-7);attachment.detach();
  assert.throws(()=>hand.attachToHand(new Group(),point,{coordinateSpace:"typo"}),/coordinateSpace/);
+});
+
+
+test("explicit joints are grouped and scene-free rotations match their poses",()=>{
+ const {manager,camera}=runtime(),hand=manager.getHand("Left");
+ const joint=hand.getJoint("ring_finger_pip"),rotation=new THREE.Quaternion();
+ assert.equal(hand.getJointRotation("ring_finger_pip",rotation),null);
+ for(const frame of capture.frames){
+  feed(manager,structuredClone(frame));
+  assert.ok(hand.getJointRotation("ring_finger_pip",rotation));
+  assert.ok(joint.quaternion.angleTo(rotation)<1e-7);
+  assert.equal(joint.parent.name,"Hand Tracking");assert.equal(joint.parent.parent,manager.context.mainCamera);
+ }
+ const root=joint.parent;hand.remove();assert.equal(joint.visible,false);
+ assert.equal(hand.getJointRotation("ring_finger_pip",rotation),null);
+ hand.dispose();assert.equal(root.children.length,0);
 });

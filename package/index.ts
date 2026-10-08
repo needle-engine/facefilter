@@ -34,6 +34,7 @@ export {
 
 
 export {
+    getHandModelUrl,
     HandTrackingBehaviour,
     HandTrackingSkinnedMeshRenderer,
 } from "./src/hands/HandTrackingBehaviour.js";
